@@ -126,6 +126,22 @@ npm run dev
 - `presentation`：発表資料・デモ
 - `survey`：評価・アンケート
 
+## メンバー向け資料（まずここから）
+初めて参加する人は，最初に `docs/member-start-guide.md` を読んでください．
+GitHub上のAgentsが使えない人は，`docs/vscode-copilot-fallback.md` を使ってください．
+`deploy-to-server` は小若さん，またはインフラ担当のみが実行します．
+
+- `docs/member-start-guide.md`
+- `docs/github-account-and-copilot-student.md`
+- `docs/github-project-tutorial.md`
+- `docs/copilot-agent-tutorial.md`
+- `docs/vscode-copilot-fallback.md`
+- `docs/tutorial-small-change.md`
+- `docs/deploy-tutorial.md`
+- `docs/troubleshooting-for-members.md`
+- `docs/glossary.md`
+- `docs/copilot-agent-prompts.md`
+
 ## 内部構造（主要ファイル）
 - `src/types/learning.ts`：型定義（Question / Choice / MisconceptionType / DiagnosisResult / LearningScore など）
 - `src/data/questions.ts`：静電界のサンプル問題 5問（選択肢に誤解タイプを付与）
