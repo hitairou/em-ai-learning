@@ -13,11 +13,11 @@
 1. GitHubアカウントを作成する（未作成の場合）
 2. GitHub Student Developer Pack / GitHub Copilot Studentを有効化する
 3. リポジトリ招待を承認する（privateリポジトリを見るために必要）
-4. GitHub Projectを開いて，全体の作業状況を見る
-5. Issueを1つ選ぶ（自分が担当する作業を決める）
-6. GitHub Copilot coding agentが使えるか確認する
-7. 使える場合はGitHub上のAgentに作業を依頼する
-8. 使えない場合はVS Code + Copilot Chatで作業する
+4. VS Code + GitHub Copilot Chatで開発できる環境を準備する（標準手順）
+5. GitHub Projectを開いて，全体の作業状況を見る
+6. Issueを1つ選ぶ（自分が担当する作業を決める）
+7. VS Codeでブランチを作り，Copilot Chatを使って小さな修正を行う（標準手順）
+8. （使える人だけ）GitHub上のCopilot cloud agent / Agentsを試す
 9. Pull Request（PR）を確認する（変更内容をチェックする）
 10. レビューを受ける（チームメンバーに確認してもらう）
 11. `main` にmergeされる（ここで初めて本番候補に入る）
@@ -43,8 +43,8 @@
 - Merge（マージ）：PRの変更を`main`へ取り込むこと
 - GitHub Actions：自動でビルドやデプロイを動かす仕組み
 - Deploy（デプロイ）：変更を公開サイトに反映すること
-- Copilot：AI支援（coding agent / Chat）
-- VS Code：コード編集アプリ（Agentが使えない人の代替）
+- Copilot：AI支援（VS CodeのCopilot Chatが標準）
+- VS Code：コード編集アプリ（このプロジェクトの標準手順）
 
 ## GitHub画面の見方（どこを押すか）
 1. ブラウザでGitHubを開く
@@ -57,14 +57,14 @@
    - `Pull requests`：PR一覧（レビューもここ）
    - `Actions`：自動ビルド・デプロイの実行結果
    - `Projects`：作業ボード
-   - `Agents`：表示される人だけ（Copilot coding agent関連）
+   - `Agents`：表示される場合があります（ただしCopilot Free / Studentでは「Available on paid plans」と出て使えない場合があります）
 
 ## どの資料をどの順番で読むか
 1. `docs/member-start-guide.md`（この資料）
 2. `docs/github-account-and-copilot-student.md`
-3. `docs/github-project-tutorial.md`
-4. `docs/copilot-agent-tutorial.md`
-5. Agentsが使えない場合：`docs/vscode-copilot-fallback.md`
-6. 実践：`docs/tutorial-small-change.md`
+3. `docs/vscode-copilot-fallback.md`（標準手順）
+4. `docs/github-project-tutorial.md`
+5. 実践：`docs/tutorial-small-change.md`
+6. `docs/deploy-tutorial.md`
 7. 困ったとき：`docs/troubleshooting-for-members.md`
-
+8. `docs/glossary.md`

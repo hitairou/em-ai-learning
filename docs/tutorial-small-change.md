@@ -2,7 +2,7 @@
 
 テーマ：トップページまたは問題演習画面の文言を **1箇所だけ** 改善します．
 
-目的：GitHub Project，Issue，Copilot（agentまたはChat），PR，Review，Merge，Deployの流れを体験することです．
+目的：GitHub Project，Issue，VS Code + Copilot Chat，PR，Review，Merge，Deployの流れを体験することです．
 
 重要：
 - 初心者メンバーは `deploy-to-server` を実行しません（小若さん，またはインフラ担当のみ）
@@ -20,19 +20,8 @@
 3. 右側の `Assignees` で自分を選ぶ
 4. `Status` を `In Progress` にする
 
-## 2．Copilot coding agentが使える場合（第一候補）
-1. Issue画面でCopilot関連ボタン（`Assign to Copilot` 等）を探す
-2. 指示文を書く（下の例をコピペしてOK）
-3. 実行する
-4. 作成されたPRを開く（`Pull requests` タブ）
-5. `Files changed` を見て，変更ファイルが想定どおりか確認する
-6. OKならレビュー依頼する（チームに確認してもらう）
-
-### 指示文例（コピペ可）
-「トップページの説明文を，静電界が対象だと伝わるように1〜2文だけ改善してください．変更してよいファイルは `src/app/page.tsx` と `src/app/globals.css` だけです．`main` へ直接pushせず，ブランチで作業しPRを作ってください．`npm run lint` と `npm run build` を確認してください．」
-
-## 3．Agentsが使えない場合（VS Code + Copilot Chat）
-この場合は `docs/vscode-copilot-fallback.md` の手順どおりです．
+## 2．標準手順（VS Code + Copilot Chat）
+このチュートリアルは `docs/vscode-copilot-fallback.md` の手順どおりに進めます．
 流れだけ要約すると，次の順です．
 1. cloneする
 2. `npm install` → `npm run dev` で動作確認
@@ -41,6 +30,10 @@
 5. `npm run lint` / `npm run build`
 6. commit → push
 7. GitHubでPR作成
+
+## 3．（使える人だけ）GitHub Copilot cloud agentを使う
+Copilot Free / Studentでは，`Agents` タブが見えても `Available on paid plans` と表示されて実行できない場合があります．
+使える場合のみ，補助手段として `docs/copilot-agent-tutorial.md` を参照してください．
 
 ## 4．PRを確認する（全員共通）
 1. PRの `Conversation` を読む（何を変えたか）
@@ -59,4 +52,3 @@
 
 ## 6．うまくいかないとき
 まず `docs/troubleshooting-for-members.md` を見てください．
-

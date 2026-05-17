@@ -1,9 +1,10 @@
-# GitHub Copilot coding agent（第一候補）チュートリアル
+# GitHub Copilot cloud agent（有料プラン向け補助）チュートリアル
 
-この資料は，GitHub上の **Copilot coding agent**（またはAgentsタブ）を使って作業する手順です．
-見えない人は `docs/vscode-copilot-fallback.md` を使ってください．
+この資料は，GitHub上の **Copilot cloud agent / Agents** を使える人向けの補助資料です．
+このプロジェクトの標準手順は `docs/vscode-copilot-fallback.md`（VS Code + Copilot Chat）です．
+Copilot Free / Studentでは，Agentsタブが見えても `Available on paid plans. Try it with Copilot Pro` と表示されて実行できない場合があります．
 
-## Copilot coding agentとは何か
+## Copilot cloud agentとは何か
 - GitHub上でIssueをもとにAIへ作業を任せる機能です．
 - AIが次のことを行います（環境により差があります）．
   - ブランチ作成
@@ -20,7 +21,7 @@
 6. 必要ならPRにコメントして修正依頼する
 7. OKならレビューしてもらい，`main` にmergeする
 
-## agentに向いている作業
+## agentに向いている作業（補助として）
 - 文言修正
 - UIの軽微な変更
 - 問題データ追加
@@ -77,11 +78,10 @@
 - サーバー設定に触らない
 
 ## 依頼文テンプレ（短い例）
-より多くの例は `docs/copilot-agent-prompts.md` を見てください．
+より多くの例は `docs/copilot-agent-prompts.md` を見てください（VS Code用が中心です）．
 
 ### 例1：文言修正（小）
 「`src/app/page.tsx` のトップページの説明文を，静電界が対象だと伝わるように1〜2文だけ改善してください．変更範囲は `src/app/page.tsx` のみでお願いします．`main` へ直接pushせずPRを作ってください．`npm run lint` と `npm run build` を確認してください．」
 
 ### 例2：問題追加（小）
 「`src/data/questions.ts` に静電界の基礎問題を1問追加してください．既存の型定義に合わせてください．`main` へ直接pushせずPRを作成し，`npm run build` が通ることを確認してください．」
-

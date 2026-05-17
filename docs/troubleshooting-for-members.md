@@ -27,7 +27,13 @@
 ## Agentsタブが見えない
 - 症状：上部メニューに `Agents` が無い
 - 原因：アカウント，プラン，提供範囲で見えない場合がある
-- 対処：`docs/vscode-copilot-fallback.md` の手順に切り替える
+- 対処：このプロジェクトの標準手順はVS Code + Copilot Chatです．`docs/vscode-copilot-fallback.md` の手順に切り替える
+
+## Agentsタブはあるが「Available on paid plans」と出る
+- 症状：Agents関連の画面で `Available on paid plans. Try it with Copilot Pro` と表示される
+- 原因：Copilot cloud agentは有料プラン向けで，Copilot Free / Studentでは実行できない場合がある
+- 確認する画面：GitHub上の `Agents` タブ，またはIssue画面のCopilot関連ボタン
+- 対処：無理にagentを使わず，標準手順（VS Code + Copilot Chat）へ進む：`docs/vscode-copilot-fallback.md`
 
 ## Issueが作れない
 - 症状：New issueが押せない，権限エラー
@@ -102,4 +108,3 @@
 ## 相談先（迷ったら）
 - まずIssueまたはPRにコメント（状況が残るのでおすすめ）
 - 緊急なら小若さんに連絡（スクショとエラー文を添える）
-

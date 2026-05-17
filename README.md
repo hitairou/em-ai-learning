@@ -128,19 +128,20 @@ npm run dev
 
 ## メンバー向け資料（まずここから）
 初めて参加する人は，最初に `docs/member-start-guide.md` を読んでください．
-GitHub上のAgentsが使えない人は，`docs/vscode-copilot-fallback.md` を使ってください．
+標準手順は `docs/vscode-copilot-fallback.md`（VS Code + GitHub Copilot Chat）です．
+GitHub上のAgentsは有料プラン向けで，Copilot Free / Studentでは使えない場合があります（`Available on paid plans` と表示されたらVS Code手順へ進みます）．
 `deploy-to-server` は小若さん，またはインフラ担当のみが実行します．
 
 - `docs/member-start-guide.md`
 - `docs/github-account-and-copilot-student.md`
-- `docs/github-project-tutorial.md`
-- `docs/copilot-agent-tutorial.md`
 - `docs/vscode-copilot-fallback.md`
+- `docs/github-project-tutorial.md`
 - `docs/tutorial-small-change.md`
 - `docs/deploy-tutorial.md`
 - `docs/troubleshooting-for-members.md`
 - `docs/glossary.md`
 - `docs/copilot-agent-prompts.md`
+- `docs/copilot-agent-tutorial.md`（有料プランでAgentが使える人向け）
 
 ## 内部構造（主要ファイル）
 - `src/types/learning.ts`：型定義（Question / Choice / MisconceptionType / DiagnosisResult / LearningScore など）

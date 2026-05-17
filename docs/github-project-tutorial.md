@@ -58,3 +58,6 @@ GitHub Projectは，チームの作業を「カード（Issue）」で見える�
 - 削除はしなくてOKです．
 - Issueにコメントで訂正を書いて，`Close issue` で閉じてください．
 
+## このProjectを見てから何をするか（次の一手）
+次にやる作業は，VS Codeでブランチを作って作業することです．
+手順は `docs/vscode-copilot-fallback.md` と `docs/tutorial-small-change.md` を見てください．

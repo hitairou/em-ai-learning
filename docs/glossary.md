@@ -81,7 +81,8 @@ ReactベースのWebアプリフレームワークです．
 型（type）を使ってミスを減らすJavaScriptの拡張です．
 
 ## Copilot
-AI支援機能の総称です．GitHub上のagentやVS CodeのChatを含みます．
+AI支援機能の総称です．このプロジェクトの標準は **VS CodeのCopilot Chat** です．
+GitHub上のCopilot cloud agentは，有料プランで使える場合がある補助機能です．
 
 ## GitHub Copilot Student
 学生向けにCopilotが使えるプランです．申請が必要な場合があります．
@@ -90,10 +91,11 @@ AI支援機能の総称です．GitHub上のagentやVS CodeのChatを含みま�
 VS Code内でAIに相談しながら修正する機能です．
 
 ## Copilot coding agent
-GitHub上でIssueを元に作業を進め，PRを作ってくれる機能です（利用できない場合もあります）．
+GitHub上でIssueを元に作業を進め，PRを作ってくれる機能です．
+ただし，Copilot Free / Studentでは `Available on paid plans` と表示されて実行できない場合があります．
 
 ## Agentsタブ
-GitHub上でagent機能を使う画面です．見えない場合はVS Code手順を使います．
+GitHub上でagent機能を使う画面です．見えない場合や実行できない場合は，VS Code手順を使います．
 
 ## LLM
 大規模言語モデルです．将来的に解説生成などで利用します．
@@ -109,4 +111,3 @@ GitHub上でagent機能を使う画面です．見えない場合はVS Code手�
 
 ## NATループバック
 LAN内から自分のグローバルドメインにアクセスできない現象です．この環境では `https://edesign.tairoh.com` がLAN内PCから開けない場合があります．スマホ回線で確認します．
-

@@ -52,9 +52,13 @@
 1. GitHubで `hitairou/em-ai-learning` を開く
 2. 上部メニューに `Agents` タブがあるか確認する
 3. `Agents` が無い場合でも異常ではありません（プラン，提供状況，権限で見えない場合があります）
+4. `Agents` が見えても，Copilot Free / Studentでは `Available on paid plans. Try it with Copilot Pro` のように表示されて **cloud agentを実行できない場合があります**．
 
 ### Agentsタブが見えない場合
-- 次の資料を使ってください：`docs/vscode-copilot-fallback.md`
+- 異常ではありません．このプロジェクトの標準手順はVS Code + Copilot Chatです．次の資料を使ってください：`docs/vscode-copilot-fallback.md`
+
+### `Available on paid plans` と出た場合
+- 有料プラン向けの機能です．無理に使おうとせず，標準手順（VS Code + Copilot Chat）へ進んでください：`docs/vscode-copilot-fallback.md`
 
 ## 注意（絶対にやらないこと）
 - パスワードをIssueに書かない
@@ -62,4 +66,3 @@
 - SSH秘密鍵を貼らない
 - GitHub Tokenを貼らない
 - Copilotの出力をそのまま信用しない（必ずPRで確認する）
-

@@ -1,6 +1,7 @@
 # Copilot用プロンプト集（コピペで使える）
 
-このファイルは，GitHub Copilot coding agent または VS Code Copilot Chat に投げる「依頼文テンプレ」です．
+このファイルは，主に **VS CodeのCopilot Chat** に投げる「依頼文テンプレ」です．
+GitHub上のCopilot cloud agent（有料プラン向け）でも使えるものは，後半にまとめます．
 初心者は，まず **文言修正テンプレ** から試してください．
 
 共通ルール（全部に必ず入れる）：
@@ -23,33 +24,38 @@
 
 ---
 
-## 1．文言修正テンプレ（最初におすすめ）
+## 1．文言修正テンプレ（最初におすすめ，VS Code向け）
 「`src/app/page.tsx` の説明文を，静電界が対象だと伝わるように1〜2文だけ改善してください．変更範囲は `src/app/page.tsx` のみ．`main` へ直接pushしないでブランチを作り，PRを作成してください．`npm run lint` と `npm run build` を実行して成功することを確認し，変更したファイルをPR本文に説明してください．SecretsやAPIキーには触らないでください．」
 
-## 2．UI改善テンプレ（小）
+## 2．UI改善テンプレ（小，VS Code向け）
 「`src/components/QuestionViewer.tsx` の選択肢ボタンの見た目を少し改善してください（余白，ホバー，選択中の強調）．変更範囲は `src/components/QuestionViewer.tsx` と `src/app/globals.css` のみ．`main` へ直接pushせずPRを作り，`npm run lint` と `npm run build` を確認してください．」
 
-## 3．問題追加テンプレ（小）
+## 3．問題追加テンプレ（小，VS Code向け）
 「`src/data/questions.ts` に静電界の基礎問題を1問追加してください．既存の型（`src/types/learning.ts`）に合わせてください．変更後に `npm run build` が通ることを確認し，PRを作成してください．」
 
-## 4．誤解タイプ整理テンプレ
+## 4．誤解タイプ整理テンプレ（VS Code向け）
 「誤解タイプの説明文を初心者向けに整理したいです．`src/lib/diagnosis.ts` と `src/lib/feedback.ts` の文章を読みやすくしてください．関数名や引数は変えないでください．`npm run lint` / `npm run build` を確認し，PRを作ってください．」
 
-## 5．学習アドバイス改善テンプレ
+## 5．学習アドバイス改善テンプレ（VS Code向け）
 「`src/lib/feedback.ts` のテンプレ学習アドバイスを，初学者にとって分かりやすい表現に改善してください．文体は丁寧で短めに．関数名や引数は変更しないでください．PRを作成し，`npm run lint` / `npm run build` を確認してください．」
 
-## 6．理解度表示改善テンプレ
+## 6．理解度表示改善テンプレ（VS Code向け）
 「`src/components/LearningScorePanel.tsx` の理解度表示を少し見やすくしてください（ラベルの見出しや説明文など）．大きな構造変更はせず，見た目と文言調整中心にしてください．PRを作成し，`npm run lint` / `npm run build` を確認してください．」
 
-## 7．ドキュメント修正テンプレ
+## 7．ドキュメント修正テンプレ（VS Code向け）
 「`docs/*` の文章を初心者向けに読みやすく整えてください（専門用語には短い説明を添える）．コードの変更はしないでください．PRを作成してください．」
 
-## 8．バグ修正テンプレ
+## 8．バグ修正テンプレ（VS Code向け）
 「再現手順：<ここに再現手順>．期待：<期待>．実際：<実際>．原因を調べ，最小の修正で直してください．修正後に `npm run lint` と `npm run build` を確認し，PRを作成してください．」
 
-## 9．PRレビュー修正依頼テンプレ（PRコメントで使う）
+## 9．PRレビュー修正依頼テンプレ（PRコメントで使う，VS Code/Agent共通）
 「レビューコメントの指摘点を反映してください．変更範囲は指摘箇所に限定し，`npm run lint` / `npm run build` を再確認してください．」
 
-## 10．変更を小さくする依頼テンプレ
-「変更が大きくなりそうなので，今回は `<対象>` のみを最小修正してください．ファイルは `<ファイル名>` のみ触ってください．PRで差分が小さくなるようにお願いします．」
+## 10．変更を小さくする依頼テンプレ（VS Code/Agent共通）
 
+---
+
+## 補助：GitHub Copilot cloud agentを使える人向け
+Copilot Free / Studentでは，Agentsタブが見えても `Available on paid plans` と表示されて使えない場合があります．
+使える人だけ，`docs/copilot-agent-tutorial.md` とあわせて使ってください．
+「変更が大きくなりそうなので，今回は `<対象>` のみを最小修正してください．ファイルは `<ファイル名>` のみ触ってください．PRで差分が小さくなるようにお願いします．」

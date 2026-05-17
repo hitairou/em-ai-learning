@@ -1,7 +1,8 @@
-# VS Code + Copilot Chat（代替手順）
+# VS Code + Copilot Chat（標準手順）
 
-この資料は，GitHub上の `Agents` タブが見えない人向けです．
-GitHub上のagentが使えなくても，VS Code + Copilot Chatで同じ流れ（ブランチ作成→修正→PR）をできます．
+このプロジェクトの初心者向け **標準手順** は，VS Code + GitHub Copilot Chatです．
+GitHub上のCopilot cloud agentは有料プラン向けで，全員が使える前提にできません．
+`Agents` タブが見えなかったり，画面に `Available on paid plans` と出た場合は，この資料の手順で進めてください．
 
 ## まず覚える（超短い説明）
 - VS Code：コードや文章を編集するアプリ
@@ -35,6 +36,9 @@ GitHub上のagentが使えなくても，VS Code + Copilot Chatで同じ流れ�
 6. 画面の案内に従い，GitHubにログインする
    - 左下のアカウントアイコン → `Sign in with GitHub`
    - ブラウザで認証
+7. Copilot Chatが開けることを確認する
+   - 左側に `Copilot Chat` のアイコンが出ているか確認する
+   - 見当たらない場合は，Extensionsで `GitHub Copilot Chat` が有効か確認する
 
 ## 3．リポジトリをcloneする
 1. ブラウザで `hitairou/em-ai-learning` を開く
@@ -111,4 +115,3 @@ GitHub上のagentが使えなくても，VS Code + Copilot Chatで同じ流れ�
 - pushできない：GitHubにログインできているか，権限があるか
 
 困ったら：`docs/troubleshooting-for-members.md` を見てください．
-
