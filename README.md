@@ -95,6 +95,37 @@ docker run -d \
 
 詳細は `docs/deployment.md` を参照してください。
 
+## 共同開発の始め方（6人チーム）
+### 1) clone
+```bash
+git clone https://github.com/hitairou/em-ai-learning.git
+cd em-ai-learning
+```
+
+### 2) 起動
+```bash
+npm install
+npm run dev
+```
+
+### 3) Issue → Branch → PR
+- まず Issue を作る（または既存 Issue を担当する）
+- ブランチ名例：`feature/5-diagnosis-engine`
+- 作業後は Pull Request を作成し、レビュー後に `main` へマージ
+
+開発フロー詳細：`docs/development-flow.md`
+初期タスク一覧：`docs/initial-issues.md`
+
+### 役割分担案
+- `question`：問題作成・タグ/難易度
+- `diagnosis`：誤解タイプ・診断ルール
+- `scoring`：理解度指標・計算
+- `ui`：画面・UX
+- `llm`：プロンプト/将来のAPI接続
+- `infra`：Docker/Actions/デプロイ
+- `presentation`：発表資料・デモ
+- `survey`：評価・アンケート
+
 ## 内部構造（主要ファイル）
 - `src/types/learning.ts`：型定義（Question / Choice / MisconceptionType / DiagnosisResult / LearningScore など）
 - `src/data/questions.ts`：静電界のサンプル問題 5問（選択肢に誤解タイプを付与）
