@@ -54,19 +54,20 @@ jobs:
 
       - name: Deploy on server (docker load + restart container)
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          IMAGE: ${{ env.IMAGE }}
+          IMAGE_ARCHIVE: ${{ env.IMAGE_ARCHIVE }}
+          CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
+          HOST_PORT: ${{ env.HOST_PORT }}
+          CONTAINER_PORT: ${{ env.CONTAINER_PORT }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_KEY }}
+          envs: IMAGE,IMAGE_ARCHIVE,CONTAINER_NAME,HOST_PORT,CONTAINER_PORT
           script: |
             set -euo pipefail
-
-            IMAGE="${IMAGE}"
-            IMAGE_ARCHIVE="${IMAGE_ARCHIVE}"
-            CONTAINER_NAME="${CONTAINER_NAME}"
-            HOST_PORT="${HOST_PORT}"
-            CONTAINER_PORT="${CONTAINER_PORT}"
 
             docker load -i "/tmp/${IMAGE_ARCHIVE}"
             docker rm -f "${CONTAINER_NAME}" || true
