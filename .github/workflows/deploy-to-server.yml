@@ -1,0 +1,94 @@
+name: deploy-to-server
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Deploy tag (e.g. main or a commit SHA)"
+        required: true
+        default: main
+
+concurrency:
+  group: deploy-em-ai-learning
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  IMAGE: ghcr.io/hitairou/em-ai-learning:${{ github.event.inputs.tag }}
+  IMAGE_ARCHIVE: em-ai-learning-image.tar.gz
+  CONTAINER_NAME: em-ai-learning
+  HOST_PORT: "3010"
+  CONTAINER_PORT: "3000"
+  SSH_USER: hoge
+  SSH_PORT: "2222"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to GHCR (runner)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull image (linux/amd64)
+        run: docker pull --platform linux/amd64 "${IMAGE}"
+
+      - name: Save image archive
+        run: docker save "${IMAGE}" | gzip -1 > "${IMAGE_ARCHIVE}"
+
+      - name: Upload archive to server (/tmp)
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER || env.SSH_USER }}
+          port: ${{ secrets.SSH_PORT || env.SSH_PORT }}
+          key: ${{ secrets.SSH_KEY }}
+          source: ${{ env.IMAGE_ARCHIVE }}
+          target: /tmp
+
+      - name: Deploy on server (docker load + restart container)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER || env.SSH_USER }}
+          port: ${{ secrets.SSH_PORT || env.SSH_PORT }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -euo pipefail
+
+            IMAGE="${IMAGE}"
+            IMAGE_ARCHIVE="${IMAGE_ARCHIVE}"
+            CONTAINER_NAME="${CONTAINER_NAME}"
+            HOST_PORT="${HOST_PORT}"
+            CONTAINER_PORT="${CONTAINER_PORT}"
+
+            docker load -i "/tmp/${IMAGE_ARCHIVE}"
+            docker rm -f "${CONTAINER_NAME}" || true
+            docker run -d \
+              --name "${CONTAINER_NAME}" \
+              --restart unless-stopped \
+              -p "127.0.0.1:${HOST_PORT}:${CONTAINER_PORT}" \
+              -e NODE_ENV=production \
+              "${IMAGE}"
+
+            rm -f "/tmp/${IMAGE_ARCHIVE}"
+
+            for i in $(seq 1 10); do
+              if curl -fsS -I "http://127.0.0.1:${HOST_PORT}" >/dev/null; then
+                echo "healthcheck ok"
+                exit 0
+              fi
+              echo "healthcheck retry (${i}/10)..."
+              sleep 2
+            done
+
+            echo "healthcheck failed"
+            docker logs --tail 200 "${CONTAINER_NAME}" || true
+            exit 1
+
