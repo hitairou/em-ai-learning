@@ -46,8 +46,8 @@ jobs:
         uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER || env.SSH_USER }}
-          port: ${{ secrets.SSH_PORT || env.SSH_PORT }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_KEY }}
           source: ${{ env.IMAGE_ARCHIVE }}
           target: /tmp
@@ -56,8 +56,8 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER || env.SSH_USER }}
-          port: ${{ secrets.SSH_PORT || env.SSH_PORT }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_KEY }}
           script: |
             set -euo pipefail
@@ -91,4 +91,3 @@ jobs:
             echo "healthcheck failed"
             docker logs --tail 200 "${CONTAINER_NAME}" || true
             exit 1
-
