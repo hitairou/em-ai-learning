@@ -117,31 +117,33 @@ npm run dev
 初期タスク一覧：`docs/initial-issues.md`
 
 ### 役割分担案
-- `question`：問題作成・タグ/難易度
-- `diagnosis`：誤解タイプ・診断ルール
-- `scoring`：理解度指標・計算
-- `ui`：画面・UX
-- `llm`：プロンプト/将来のAPI接続
-- `infra`：Docker/Actions/デプロイ
-- `presentation`：発表資料・デモ
-- `survey`：評価・アンケート
+- `問題`：問題作成・タグ/難易度
+- `診断`：誤解タイプ・診断ルール
+- `理解度`：理解度指標・計算
+- `UI`：画面・UX
+- `LLM`：プロンプト/将来のAPI接続
+- `インフラ`：Docker/Actions/デプロイ
+- `発表`：発表資料・デモ
+- `資料`：READMEやdocsの整備
+- `アンケート`：評価・アンケート
 
 ## メンバー向け資料（まずここから）
-初めて参加する人は，最初に `docs/member-start-guide.md` を読んでください．
-標準手順は `docs/vscode-copilot-fallback.md`（VS Code + GitHub Copilot Chat）です．
+初めて参加する人は，最初に `docs/01-member-start-guide.md` を読んでください．
+標準手順は `docs/03-vscode-copilot-chat.md`（VS Code + GitHub Copilot Chat）です．
 GitHub上のAgentsは有料プラン向けで，Copilot Free / Studentでは使えない場合があります（`Available on paid plans` と表示されたらVS Code手順へ進みます）．
 `deploy-to-server` は小若さん，またはインフラ担当のみが実行します．
 
-- `docs/member-start-guide.md`
-- `docs/github-account-and-copilot-student.md`
-- `docs/vscode-copilot-fallback.md`
-- `docs/github-project-tutorial.md`
-- `docs/tutorial-small-change.md`
-- `docs/deploy-tutorial.md`
-- `docs/troubleshooting-for-members.md`
-- `docs/glossary.md`
-- `docs/copilot-agent-prompts.md`
-- `docs/copilot-agent-tutorial.md`（有料プランでAgentが使える人向け）
+- `docs/00-wiki-home.md`
+- `docs/01-member-start-guide.md`
+- `docs/02-github-account-and-copilot-student.md`
+- `docs/03-vscode-copilot-chat.md`
+- `docs/04-github-project-tutorial.md`
+- `docs/05-tutorial-small-change.md`
+- `docs/06-deploy-tutorial.md`
+- `docs/07-troubleshooting-for-members.md`
+- `docs/08-glossary.md`
+- `docs/09-copilot-prompts.md`
+- `docs/90-copilot-cloud-agent.md`（有料プランでAgentが使える人向け）
 
 ## 内部構造（主要ファイル）
 - `src/types/learning.ts`：型定義（Question / Choice / MisconceptionType / DiagnosisResult / LearningScore など）

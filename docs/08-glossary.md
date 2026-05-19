@@ -1,6 +1,10 @@
-# 用語集（初心者向け）
+# 08 用語集（初心者向け）
 
-各用語は，このプロジェクトでの具体例つきで説明します．
+前へ：[07 トラブル対応集（初心者向け）](./07-troubleshooting-for-members.md) / 次へ：[09 Copilot用プロンプト集](./09-copilot-prompts.md)
+
+このページは，初心者向けの用語集です．
+
+（本文は旧ファイル `docs/glossary.md` の内容を移しました）
 
 ## GitHub
 チームでコードやIssueを共有するWebサービスです．このプロジェクトでは `hitairou/em-ai-learning` が作業場所です．
@@ -41,73 +45,25 @@ GitHub上の最新変更を自分のPCへ取り込むことです．
 ## GitHub Actions
 ビルドやデプロイなどを自動で実行する仕組みです．`Actions` タブで見ます．
 
-## Workflow（ワークフロー）
-Actionsの「手順書」です．例：`docker-publish.yml`．
-
 ## docker-publish
 `main` への変更でDocker imageを作り，GHCRへ保存するworkflowです．
 
 ## deploy-to-server
 担当者が手動で実行し，サーバー（ESPRIMO）のコンテナを更新するworkflowです．
 
-## Docker
-アプリを「コンテナ」として動かす仕組みです．環境差を減らせます．
-
-## Image（イメージ）
-コンテナの元になる実行パッケージです．
-
-## Container（コンテナ）
-imageから起動した実行中のアプリです．このプロジェクトでは `em-ai-learning` が該当します．
-
-## GHCR
-GitHubのDocker image置き場（GitHub Container Registry）です．例：`ghcr.io/hitairou/em-ai-learning:main`．
-
-## nginx
-Webアクセスを受けて，裏側のアプリに転送するソフトです（リバースプロキシ）．
-
-## certbot
-HTTPS証明書（Let’s Encrypt）を取得・更新するツールです．
-
-## HTTPS
-暗号化されたWeb通信です．URLが `https://` で始まります．
-
-## localStorage
-ブラウザにデータを保存する仕組みです．このMVPでは理解度スコアを保存します．
-
-## Next.js
-ReactベースのWebアプリフレームワークです．
-
-## TypeScript
-型（type）を使ってミスを減らすJavaScriptの拡張です．
+## Docker / Image / Container / GHCR
+アプリをコンテナとして動かす仕組みです．imageは「実行パッケージ」，containerは「起動中の実体」です．GHCRはimageの置き場です．
 
 ## Copilot
 AI支援機能の総称です．このプロジェクトの標準は **VS CodeのCopilot Chat** です．
 GitHub上のCopilot cloud agentは，有料プランで使える場合がある補助機能です．
 
-## GitHub Copilot Student
-学生向けにCopilotが使えるプランです．申請が必要な場合があります．
-
-## Copilot Chat
-VS Code内でAIに相談しながら修正する機能です．
-
-## Copilot coding agent
-GitHub上でIssueを元に作業を進め，PRを作ってくれる機能です．
-ただし，Copilot Free / Studentでは `Available on paid plans` と表示されて実行できない場合があります．
-
-## Agentsタブ
-GitHub上でagent機能を使う画面です．見えない場合や実行できない場合は，VS Code手順を使います．
-
-## LLM
-大規模言語モデルです．将来的に解説生成などで利用します．
-
-## API
-アプリ同士が通信するための窓口です．
-
-## Secrets
-パスワードや鍵などの機密情報を安全に保存する仕組みです．IssueやPRに貼らないでください．
-
-## 環境変数
-実行時に渡す設定値です（例：`NODE_ENV`）．
+## Copilot cloud agent / Agentsタブ
+GitHub上でagent機能を使う画面です．Copilot Free / Studentでは `Available on paid plans` と表示されて実行できない場合があります．
 
 ## NATループバック
 LAN内から自分のグローバルドメインにアクセスできない現象です．この環境では `https://edesign.tairoh.com` がLAN内PCから開けない場合があります．スマホ回線で確認します．
+
+---
+前へ：[07 トラブル対応集（初心者向け）](./07-troubleshooting-for-members.md) / 次へ：[09 Copilot用プロンプト集](./09-copilot-prompts.md)
+

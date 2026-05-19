@@ -1,4 +1,6 @@
-# メンバー向けスタートガイド（最初に読む）
+# 01 メンバー向けスタートガイド（最初に読む）
+
+前へ：[00 Wiki Home（入口）](./00-wiki-home.md) / 次へ：[02 GitHubアカウント作成，Copilot Studentの準備](./02-github-account-and-copilot-student.md)
 
 このプロジェクトは，電気磁気学（静電界）を対象にした **AI学習支援Webアプリ** を作る共同開発です．
 
@@ -6,7 +8,7 @@
 - 回答パターンから「誤解タイプ」を診断する
 - 解説と理解度表示で学習を支援する
 
-公開URL：`https://edesign.tairoh.com`
+公開URL：`https://edesign.tairoh.com`  
 リポジトリ：`hitairou/em-ai-learning`（private）
 
 ## まずやること一覧（上から順に）
@@ -60,11 +62,16 @@
    - `Agents`：表示される場合があります（ただしCopilot Free / Studentでは「Available on paid plans」と出て使えない場合があります）
 
 ## どの資料をどの順番で読むか
-1. `docs/member-start-guide.md`（この資料）
-2. `docs/github-account-and-copilot-student.md`
-3. `docs/vscode-copilot-fallback.md`（標準手順）
-4. `docs/github-project-tutorial.md`
-5. 実践：`docs/tutorial-small-change.md`
-6. `docs/deploy-tutorial.md`
-7. 困ったとき：`docs/troubleshooting-for-members.md`
-8. `docs/glossary.md`
+1. `docs/00-wiki-home.md`
+2. `docs/01-member-start-guide.md`（この資料）
+3. `docs/02-github-account-and-copilot-student.md`
+4. `docs/03-vscode-copilot-chat.md`（標準手順）
+5. `docs/04-github-project-tutorial.md`
+6. `docs/05-tutorial-small-change.md`
+7. `docs/06-deploy-tutorial.md`
+8. `docs/07-troubleshooting-for-members.md`
+9. `docs/08-glossary.md`
+
+---
+前へ：[00 Wiki Home（入口）](./00-wiki-home.md) / 次へ：[02 GitHubアカウント作成，Copilot Studentの準備](./02-github-account-and-copilot-student.md)
+

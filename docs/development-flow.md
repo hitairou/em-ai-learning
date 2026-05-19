@@ -36,14 +36,14 @@ npm run dev
 - サーバー側は nginx が `http://127.0.0.1:3010` を upstream としてプロキシする
 
 ## 役割分担案（例）
-- コンテンツ（問題作成・難易度・タグ）: `question`
-- 診断エンジン（誤解タイプ・ルール）: `diagnosis`
-- スコアリング（理解度計算・可視化指標）: `scoring`
-- UI/UX: `ui`
-- LLM接続・プロンプト: `llm`
-- インフラ（Docker/Actions/デプロイ）: `infra`
-- 資料・デモシナリオ: `presentation`
-- アンケート・評価設計: `survey`
+- コンテンツ（問題作成・難易度・タグ）: `問題`
+- 診断エンジン（誤解タイプ・ルール）: `診断`
+- スコアリング（理解度計算・可視化指標）: `理解度`
+- UI/UX: `UI`
+- LLM接続・プロンプト: `LLM`
+- インフラ（Docker/Actions/デプロイ）: `インフラ`
+- 資料・デモシナリオ: `発表` / `資料`
+- アンケート・評価設計: `アンケート`
 
 ## メンバー招待（GitHub ID が確定してから）
 1. リポジトリの `Settings` → `Collaborators` でメンバーを招待
@@ -51,7 +51,7 @@ npm run dev
 3. 全員がブランチ運用と PR レビューを守る
 
 ## GitHub Project（ボード）運用
-可能なら Project（Board）で `Backlog / Todo / In Progress / Review / Done` を使います。
+Project（Board）で `バックログ / 未着手 / 作業中 / レビュー中 / 完了` を使います。
 
 ### CLI（gh）でProjectを作る場合
 `gh project` を使うには token scope が必要です。`gh auth status` に `project` / `read:project` が無い場合は、**対話モードのターミナル**で次を実行して認証してください。
@@ -73,8 +73,8 @@ gh project list --owner hitairou
 - Issue をボードに追加して進捗管理
 
 列（例）:
-- Backlog
-- Todo
-- In Progress
-- Review
-- Done
+- バックログ
+- 未着手
+- 作業中
+- レビュー中
+- 完了
