@@ -18,58 +18,55 @@ permissions:
 
 env:
   IMAGE: ghcr.io/hitairou/em-ai-learning:${{ github.event.inputs.tag }}
-  IMAGE_ARCHIVE: em-ai-learning-image.tar.gz
   CONTAINER_NAME: em-ai-learning
   HOST_PORT: "3010"
   CONTAINER_PORT: "3000"
-  SSH_USER: hoge
-  SSH_PORT: "2222"
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - name: Login to GHCR (runner)
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Pull image (linux/amd64)
-        run: docker pull --platform linux/amd64 "${IMAGE}"
-
-      - name: Save image archive
-        run: docker save "${IMAGE}" | gzip -1 > "${IMAGE_ARCHIVE}"
-
-      - name: Upload archive to server (/tmp)
-        uses: appleboy/scp-action@v1.0.0
+      - name: Check SSH connectivity
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_KEY }}
-          source: ${{ env.IMAGE_ARCHIVE }}
-          target: /tmp
+          timeout: 60s
+          command_timeout: 2m
+          script: |
+            set -euo pipefail
+            echo "ssh ok"
+            hostname
+            docker --version
 
-      - name: Deploy on server (docker load + restart container)
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Deploy on server via docker pull
+        uses: appleboy/ssh-action@v1.2.0
         env:
           IMAGE: ${{ env.IMAGE }}
-          IMAGE_ARCHIVE: ${{ env.IMAGE_ARCHIVE }}
           CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
           HOST_PORT: ${{ env.HOST_PORT }}
           CONTAINER_PORT: ${{ env.CONTAINER_PORT }}
+          GHCR_USERNAME: hitairou
+          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_KEY }}
-          envs: IMAGE,IMAGE_ARCHIVE,CONTAINER_NAME,HOST_PORT,CONTAINER_PORT
+          timeout: 60s
+          command_timeout: 10m
+          envs: IMAGE,CONTAINER_NAME,HOST_PORT,CONTAINER_PORT,GHCR_USERNAME,GHCR_READ_TOKEN
           script: |
             set -euo pipefail
+            if [ -z "${GHCR_READ_TOKEN:-}" ]; then
+              echo "ERROR: GHCR_READ_TOKEN is missing" >&2
+              exit 1
+            fi
 
-            docker load -i "/tmp/${IMAGE_ARCHIVE}"
+            printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null 2>&1
+            docker pull "$IMAGE"
             docker rm -f "${CONTAINER_NAME}" || true
             docker run -d \
               --name "${CONTAINER_NAME}" \
@@ -78,11 +75,10 @@ jobs:
               -e NODE_ENV=production \
               "${IMAGE}"
 
-            rm -f "/tmp/${IMAGE_ARCHIVE}"
-
             for i in $(seq 1 10); do
               if curl -fsS -I "http://127.0.0.1:${HOST_PORT}" >/dev/null; then
                 echo "healthcheck ok"
+                docker logout ghcr.io >/dev/null 2>&1 || true
                 exit 0
               fi
               echo "healthcheck retry (${i}/10)..."
@@ -91,4 +87,5 @@ jobs:
 
             echo "healthcheck failed"
             docker logs --tail 200 "${CONTAINER_NAME}" || true
+            docker logout ghcr.io >/dev/null 2>&1 || true
             exit 1

@@ -79,13 +79,14 @@ docker run -d \
 このプロジェクトは **既存 ops/man 方式に合わせた2段階** でデプロイします。
 
 - `docker-publish.yml`：`main` push で Docker image を GHCR に build & push
-- `deploy-to-server.yml`：手動（workflow_dispatch）でサーバーへデプロイ（tar.gz 転送方式）
+- `deploy-to-server.yml`：手動（workflow_dispatch）でサーバーへデプロイ（**サーバー側 docker pull 方式**）
 
 必要な Secrets（Repository secrets）:
 - `SSH_HOST`
 - `SSH_USER`
 - `SSH_PORT`
 - `SSH_KEY`
+- `GHCR_READ_TOKEN`（read:packages の PAT。サーバー側 `docker login ghcr.io` 用）
 
 初回手順（推奨）:
 1. `main` へ push
