@@ -42,8 +42,15 @@ jobs:
             exit 1
           fi
 
-          printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null 2>&1
-          docker pull "$IMAGE" >/dev/null
+          if ! printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null; then
+            echo "ERROR: docker login ghcr.io failed" >&2
+            exit 1
+          fi
+          if ! docker pull "$IMAGE" >/dev/null; then
+            echo "ERROR: docker pull failed: $IMAGE" >&2
+            docker logout ghcr.io >/dev/null 2>&1 || true
+            exit 1
+          fi
           docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
           docker run -d \
             --name "${CONTAINER_NAME}" \
