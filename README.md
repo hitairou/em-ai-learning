@@ -79,7 +79,7 @@ docker run -d \
 このプロジェクトは **既存 ops/man 方式に合わせた2段階** でデプロイします。
 
 - `docker-publish.yml`：`main` push で Docker image を GHCR に build & push
-- `deploy-to-server.yml`：手動（workflow_dispatch）でサーバーへデプロイ（**サーバー側 docker pull 方式**）
+- `deploy-to-server.yml`：手動（workflow_dispatch）でサーバーへデプロイ（**ESPRIMO self-hosted runner 上で docker pull 方式**）
 
 必要な Secrets（Repository secrets）:
 - `SSH_HOST`

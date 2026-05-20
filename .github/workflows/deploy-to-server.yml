@@ -24,25 +24,9 @@ env:
 
 jobs:
   deploy:
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, ecorun-esprimo]
     steps:
-      - name: Check SSH connectivity
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          port: 2222
-          key: ${{ secrets.SSH_KEY }}
-          timeout: 60s
-          command_timeout: 2m
-          script: |
-            set -euo pipefail
-            echo "ssh ok"
-            hostname
-            docker --version
-
-      - name: Deploy on server via docker pull
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Deploy locally on ESPRIMO (docker pull + restart)
         env:
           IMAGE: ${{ env.IMAGE }}
           CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
@@ -50,42 +34,33 @@ jobs:
           CONTAINER_PORT: ${{ env.CONTAINER_PORT }}
           GHCR_USERNAME: hitairou
           GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          port: 2222
-          key: ${{ secrets.SSH_KEY }}
-          timeout: 60s
-          command_timeout: 10m
-          envs: IMAGE,CONTAINER_NAME,HOST_PORT,CONTAINER_PORT,GHCR_USERNAME,GHCR_READ_TOKEN
-          script: |
-            set -euo pipefail
-            if [ -z "${GHCR_READ_TOKEN:-}" ]; then
-              echo "ERROR: GHCR_READ_TOKEN is missing" >&2
-              exit 1
-            fi
-
-            printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null 2>&1
-            docker pull "$IMAGE"
-            docker rm -f "${CONTAINER_NAME}" || true
-            docker run -d \
-              --name "${CONTAINER_NAME}" \
-              --restart unless-stopped \
-              -p "127.0.0.1:${HOST_PORT}:${CONTAINER_PORT}" \
-              -e NODE_ENV=production \
-              "${IMAGE}"
-
-            for i in $(seq 1 10); do
-              if curl -fsS -I "http://127.0.0.1:${HOST_PORT}" >/dev/null; then
-                echo "healthcheck ok"
-                docker logout ghcr.io >/dev/null 2>&1 || true
-                exit 0
-              fi
-              echo "healthcheck retry (${i}/10)..."
-              sleep 2
-            done
-
-            echo "healthcheck failed"
-            docker logs --tail 200 "${CONTAINER_NAME}" || true
-            docker logout ghcr.io >/dev/null 2>&1 || true
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GHCR_READ_TOKEN:-}" ]; then
+            echo "ERROR: GHCR_READ_TOKEN is missing" >&2
             exit 1
+          fi
+
+          printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null 2>&1
+          docker pull "$IMAGE" >/dev/null
+          docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+          docker run -d \
+            --name "${CONTAINER_NAME}" \
+            --restart unless-stopped \
+            -p "127.0.0.1:${HOST_PORT}:${CONTAINER_PORT}" \
+            -e NODE_ENV=production \
+            "${IMAGE}" >/dev/null
+
+          for i in $(seq 1 10); do
+            if curl -fsS -I "http://127.0.0.1:${HOST_PORT}" >/dev/null; then
+              docker logout ghcr.io >/dev/null 2>&1 || true
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "healthcheck failed" >&2
+          docker logs --tail 200 "${CONTAINER_NAME}" || true
+          docker logout ghcr.io >/dev/null 2>&1 || true
+          exit 1
