@@ -145,6 +145,9 @@ GitHub上のAgentsは有料プラン向けで，Copilot Free / Studentでは使�
 - `docs/09-copilot-prompts.md`
 - `docs/90-copilot-cloud-agent.md`（有料プランでAgentが使える人向け）
 
+## 初学者向け：Webアプリ実践チュートリアル
+- `docs/web-app-tutorial/README.md`（章ごとに順番に読めるハンズオン）
+
 ## 内部構造（主要ファイル）
 - `src/types/learning.ts`：型定義（Question / Choice / MisconceptionType / DiagnosisResult / LearningScore など）
 - `src/data/questions.ts`：静電界のサンプル問題 5問（選択肢に誤解タイプを付与）
