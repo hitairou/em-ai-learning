@@ -34,6 +34,7 @@ jobs:
           CONTAINER_PORT: ${{ env.CONTAINER_PORT }}
           GHCR_USERNAME: hitairou
           GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
@@ -43,8 +44,15 @@ jobs:
           fi
 
           if ! printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null; then
-            echo "ERROR: docker login ghcr.io failed" >&2
-            exit 1
+            echo "WARN: docker login with GHCR_READ_TOKEN failed; retrying with GITHUB_TOKEN" >&2
+            if [ -z "${GITHUB_TOKEN:-}" ]; then
+              echo "ERROR: GITHUB_TOKEN is not available" >&2
+              exit 1
+            fi
+            if ! printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null; then
+              echo "ERROR: docker login ghcr.io failed (both tokens)" >&2
+              exit 1
+            fi
           fi
           if ! docker pull "$IMAGE" >/dev/null; then
             echo "ERROR: docker pull failed: $IMAGE" >&2
