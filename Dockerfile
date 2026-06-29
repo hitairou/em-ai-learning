@@ -15,6 +15,7 @@ RUN npm ci --omit=dev
 
 FROM base AS builder
 ENV NODE_ENV=production
+ENV DATABASE_URL=file:./dev.db
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate && npm run build
