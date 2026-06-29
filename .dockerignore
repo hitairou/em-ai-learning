@@ -17,4 +17,5 @@ desktop.ini
 *.log
 *.tmp
 *.swp
-
+prisma/dev.db*
+data/uploads

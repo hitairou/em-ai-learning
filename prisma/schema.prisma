@@ -1,0 +1,179 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String                    @id @default(cuid())
+  name                String
+  email               String                    @unique
+  passwordHash        String
+  role                String                    @default("user")
+  selectedCourse      String?
+  learningPurpose     String?
+  onboardingCompleted Boolean                   @default(false)
+  diagnosticCompleted Boolean                   @default(false)
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  diagnosticAttempts  DiagnosticAttempt[]
+  skillProfiles       UserSkillProfile[]
+  practiceAttempts    PracticeAttempt[]
+  questionSessions    QuestionSession[]
+  similarProblems     GeneratedSimilarProblem[]
+}
+
+model Problem {
+  id                   String                    @id @default(cuid())
+  course               String
+  unit                 String
+  topic                String
+  subtopic             String?
+  difficulty           Int                       @default(1)
+  sourceType           String                    @default("exercise")
+  sourceYear           Int?
+  title                String
+  questionText         String
+  choicesJson          String?
+  correctAnswer        String
+  solution             String
+  explanation          String
+  keyConceptsJson      String                    @default("[]")
+  requiredFormulasJson String                    @default("[]")
+  commonMistakesJson   String                    @default("[]")
+  figureUrlsJson       String                    @default("[]")
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  diagnosticAnswers    DiagnosticAnswer[]
+  practiceAttempts     PracticeAttempt[]
+  generatedFrom        GeneratedSimilarProblem[] @relation("SourceProblem")
+
+  @@index([course, sourceType])
+  @@index([course, unit, topic])
+}
+
+model DiagnosticAttempt {
+  id          String             @id @default(cuid())
+  userId      String
+  course      String
+  score       Int                @default(0)
+  startedAt   DateTime           @default(now())
+  completedAt DateTime?
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers     DiagnosticAnswer[]
+
+  @@index([userId, completedAt])
+}
+
+model DiagnosticAnswer {
+  id             String            @id @default(cuid())
+  attemptId      String
+  problemId      String
+  selectedChoice String
+  isCorrect      Boolean
+  answerTimeSec  Int
+  mistakeType    String
+  attempt        DiagnosticAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  problem        Problem           @relation(fields: [problemId], references: [id], onDelete: Restrict)
+
+  @@index([attemptId])
+}
+
+model UserSkillProfile {
+  id               String   @id @default(cuid())
+  userId           String
+  course           String
+  topic            String
+  score            Int      @default(0)
+  attempts         Int      @default(0)
+  correctCount     Int      @default(0)
+  correctRate      Float    @default(0)
+  averageTimeSec   Float    @default(0)
+  hintUsageRate    Float    @default(0)
+  lastStudiedAt    DateTime?
+  mistakeTypesJson String   @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, course, topic])
+  @@index([userId, score])
+}
+
+model PracticeAttempt {
+  id            String   @id @default(cuid())
+  userId        String
+  problemId     String
+  userAnswer    String
+  isCorrect     Boolean
+  aiFeedback    String
+  mistakeType   String
+  answerTimeSec Int
+  hintUsedCount Int      @default(0)
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem       Problem  @relation(fields: [problemId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+}
+
+model QuestionSession {
+  id               String        @id @default(cuid())
+  userId           String
+  course           String
+  inputType        String
+  originalFilePath String?
+  extractedText    String
+  detectedTopic    String?
+  aiSummary        String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages         ChatMessage[]
+
+  @@index([userId, createdAt])
+}
+
+model ChatMessage {
+  id        String          @id @default(cuid())
+  sessionId String
+  role      String
+  content   String
+  createdAt DateTime        @default(now())
+  session   QuestionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+}
+
+model Material {
+  id            String   @id @default(cuid())
+  course        String
+  type          String
+  title         String
+  filePath      String?
+  extractedText String
+  sourceYear    Int?
+  tagsJson      String   @default("[]")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([course, type])
+}
+
+model GeneratedSimilarProblem {
+  id                String   @id @default(cuid())
+  userId            String
+  sourceProblemId   String?
+  generatedQuestion String
+  generatedSolution String
+  difficulty        Int
+  topic             String
+  createdAt         DateTime @default(now())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceProblem     Problem? @relation("SourceProblem", fields: [sourceProblemId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+}

@@ -11,7 +11,7 @@ export const QUESTIONS: Question[] = [
       {
         id: "a",
         text: "+Q に向かう（内向き）",
-        misconceptionType: "charge_direction_confusion",
+        misconceptionType: "vector_direction_error",
         feedbackHint: "正電荷の電場は外向き（押し出す向き）を思い出そう。",
       },
       {
@@ -23,13 +23,13 @@ export const QUESTIONS: Question[] = [
       {
         id: "c",
         text: "円周に沿う（接線方向）",
-        misconceptionType: "equipotential_field_relation_confusion",
+        misconceptionType: "vector_direction_error",
         feedbackHint: "等電位線（面）と電場の関係を整理しよう。",
       },
       {
         id: "d",
         text: "向きは定まらない",
-        misconceptionType: "field_potential_confusion",
+        misconceptionType: "concept_error",
         feedbackHint: "点電荷の電場は位置で方向が定まる（放射状）。",
       },
     ],
@@ -49,7 +49,7 @@ export const QUESTIONS: Question[] = [
       {
         id: "a",
         text: "ベクトル量（向きをもつ）",
-        misconceptionType: "vector_scalar_confusion",
+        misconceptionType: "concept_error",
         feedbackHint: "電位はスカラー。向きを持つのは電場 E。",
       },
       {
@@ -61,13 +61,13 @@ export const QUESTIONS: Question[] = [
       {
         id: "c",
         text: "テンソル量",
-        misconceptionType: "vector_scalar_confusion",
+        misconceptionType: "concept_error",
         feedbackHint: "まずはスカラー/ベクトルの区別から整理しよう。",
       },
       {
         id: "d",
         text: "状況によりベクトルにもスカラーにもなる",
-        misconceptionType: "field_potential_confusion",
+        misconceptionType: "concept_error",
         feedbackHint: "電位の定義は一貫してスカラー（位置の関数）。",
       },
     ],
@@ -87,7 +87,7 @@ export const QUESTIONS: Question[] = [
       {
         id: "a",
         text: "|E| ∝ 1/r,  V ∝ 1/r²",
-        misconceptionType: "distance_dependence_confusion",
+        misconceptionType: "formula_selection_error",
         feedbackHint: "電場は 1/r²、電位は 1/r の関係を確認しよう。",
       },
       {
@@ -99,13 +99,13 @@ export const QUESTIONS: Question[] = [
       {
         id: "c",
         text: "|E| ∝ 1/r², V ∝ 1/r²",
-        misconceptionType: "distance_dependence_confusion",
+        misconceptionType: "formula_selection_error",
         feedbackHint: "V は 1/r。E は V を r で微分するイメージ。",
       },
       {
         id: "d",
         text: "|E| は一定, V ∝ r",
-        misconceptionType: "distance_dependence_confusion",
+        misconceptionType: "formula_selection_error",
         feedbackHint: "点電荷の影響は距離で弱まる。基本式に立ち返ろう。",
       },
     ],
@@ -125,7 +125,7 @@ export const QUESTIONS: Question[] = [
       {
         id: "a",
         text: "電場は等電位面に接する（接線方向）",
-        misconceptionType: "equipotential_field_relation_confusion",
+        misconceptionType: "vector_direction_error",
         feedbackHint: "等電位面上では電位が変化しない → 電場はその法線方向。",
       },
       {
@@ -137,13 +137,13 @@ export const QUESTIONS: Question[] = [
       {
         id: "c",
         text: "電場は等電位面と無関係",
-        misconceptionType: "field_potential_confusion",
+        misconceptionType: "concept_error",
         feedbackHint: "電場は電位の空間変化（勾配）で決まる。",
       },
       {
         id: "d",
         text: "電場は等電位面に平行・垂直の両方になり得る",
-        misconceptionType: "equipotential_field_relation_confusion",
+        misconceptionType: "vector_direction_error",
         feedbackHint: "静電場では常に等電位面に垂直。",
       },
     ],
@@ -163,7 +163,7 @@ export const QUESTIONS: Question[] = [
       {
         id: "a",
         text: "電位 V、電場 E",
-        misconceptionType: "vector_scalar_confusion",
+        misconceptionType: "concept_error",
         feedbackHint: "V はスカラー、E はベクトル。",
       },
       {
@@ -175,13 +175,13 @@ export const QUESTIONS: Question[] = [
       {
         id: "c",
         text: "電位 V、仕事 W",
-        misconceptionType: "vector_scalar_confusion",
+        misconceptionType: "concept_error",
         feedbackHint: "V も W もスカラー。",
       },
       {
         id: "d",
         text: "電荷 Q、電位 V",
-        misconceptionType: "vector_scalar_confusion",
+        misconceptionType: "concept_error",
         feedbackHint: "Q も V もスカラー（符号はあるが向きではない）。",
       },
     ],
@@ -192,4 +192,3 @@ export const QUESTIONS: Question[] = [
     difficulty: 1,
   },
 ];
-

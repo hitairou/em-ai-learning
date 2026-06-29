@@ -1,6 +1,2 @@
-import ProgressClient from "@/components/ProgressClient";
-
-export default function ProgressPage() {
-  return <ProgressClient />;
-}
-
+import { redirect } from "next/navigation";
+export default function ProgressPage() { redirect("/profile"); }

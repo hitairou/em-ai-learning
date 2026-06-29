@@ -1,43 +1,24 @@
 import Link from "next/link";
+import { ArrowRight, Camera, CheckCircle2, Route, Sparkles } from "lucide-react";
 
-export default function Home() {
+export default function LandingPage() {
   return (
-    <div className="stack">
-      <section className="hero">
-        <h1 className="title">電気磁気学AI学習支援システム</h1>
-        <p className="subtitle">静電界における誤解診断Webアプリ</p>
-        <div className="heroActions">
-          <Link className="buttonPrimary" href="/practice">
-            問題演習を始める
-          </Link>
-          <Link className="buttonSecondary" href="/progress">
-            理解度を見る
-          </Link>
+    <div className="landingPage">
+      <section className="landingHero">
+        <div className="heroCopy">
+          <span className="eyebrow">TOKUSHIMA UNIVERSITY / ELECTROMAGNETISM</span>
+          <h1>電磁気の「わからない」を、<br /><em>今日やる1問</em>に変える。</h1>
+          <p>電磁気1・2に特化した診断と演習。写真で質問した問題も、苦手分析と次の復習につながります。</p>
+          <div className="heroButtons"><Link className="button primaryButton" href="/signup">今すぐ始める <ArrowRight size={18} /></Link><Link className="button ghostButton" href="/login">ログイン</Link></div>
+          <div className="heroProof"><span><CheckCircle2 /> 5問で苦手診断</span><span><CheckCircle2 /> 登録無料</span></div>
+        </div>
+        <div className="heroVisual" aria-label="学習フローのイメージ">
+          <div className="formulaOrbit formulaOne">∮ E·dS = Q/ε₀</div><div className="formulaOrbit formulaTwo">∇×E = -∂B/∂t</div>
+          <div className="phoneMock"><div className="phoneTop"><span>今日やること</span><strong>電磁気1</strong></div><div className="miniScore"><span>診断スコア</span><strong>62</strong></div><div className="miniTask"><small>まずここから</small><strong>ガウス面の選択</strong><div className="miniMeter"><span /></div></div><div className="phoneCamera"><Camera /><span>写真で質問</span></div></div>
         </div>
       </section>
-
-      <section className="card">
-        <h2 className="h2">対象分野（静電界）</h2>
-        <ul className="list">
-          <li>電場と電位の違い（ベクトル量 vs スカラー量）</li>
-          <li>電場の向き（正電荷・負電荷、電位の勾配）</li>
-          <li>距離依存性（点電荷の 1/r² と電位の 1/r）</li>
-          <li>等電位面と電場の関係（直交・接線方向）</li>
-        </ul>
-      </section>
-
-      <section className="card">
-        <h2 className="h2">主な機能（MVP）</h2>
-        <ul className="list">
-          <li>5問の選択式問題を1問ずつ解く</li>
-          <li>回答パターンから誤解タイプを推定</li>
-          <li>診断結果と学習アドバイスを表示（テンプレート生成）</li>
-          <li>分野別理解度スコアを可視化</li>
-        </ul>
-        <p className="muted">
-          ※ 現時点ではデータベースもLLM APIも使いません（後から差し替え可能な構造にしています）。
-        </p>
-      </section>
+      <section className="featureBand"><article><Camera /><span>01</span><h2>撮って質問</h2><p>問題用紙や課題を撮影。使う法則と考え方から解説します。</p></article><article><Route /><span>02</span><h2>弱点を診断</h2><p>符号・対称性・公式選択まで、間違えた理由を分類します。</p></article><article><Sparkles /><span>03</span><h2>次の1問へ</h2><p>履歴から今日の優先問題と類題を選び、復習へつなげます。</p></article></section>
+      <section className="landingCta"><span className="eyebrow">基礎から合格ラインへ</span><h2>何から始めるかは、診断に任せる。</h2><Link className="button lightButton" href="/signup">5問診断を始める <ArrowRight size={18} /></Link></section>
     </div>
   );
 }

@@ -1,174 +1,157 @@
-# 電気磁気学AI学習支援Webアプリ（共同開発用土台）
+# EM PASS - 徳島大学 電磁気AI学習支援
 
-## プロジェクト概要
-静電界（電気静力学）の学習者が、選択式問題を解くことで「誤解タイプ」を診断し、診断結果と学習アドバイスを表示する Web アプリです。
+徳島大学の「電磁気1」「電磁気2」を対象に、5問診断、苦手別演習、AI採点、優先復習、写真・PDF質問を一つの学習履歴へまとめるWebアプリです。答えだけではなく、使う法則、途中式、符号、単位、ベクトル方向、境界条件を確認する設計です。
 
-本リポジトリは **6人グループで GitHub を使って共同開発するための Next.js + TypeScript（App Router）MVP土台** です。
+## 主な機能
 
-## 対象分野
-- 電場と電位（ベクトル量・スカラー量、E = −∇V）
-- 電場の向き（正電荷・負電荷、電位の減少方向）
-- 距離依存性（点電荷：|E| ∝ 1/r²、V ∝ 1/r）
-- 等電位面と電場の関係（直交）
+- メール・パスワード認証（bcryptjs、署名付きJWT、httpOnly cookie）
+- 電磁気1・2の選択と5問診断
+- 回答時間・ヒント・誤答原因を含む単元別スキルプロファイル
+- 基礎確認、標準演習、試験対策の3モード
+- AI採点と、OpenAI API障害時のテンプレート採点
+- 画像、PDF、テキストからの質問と類題生成
+- 復習キュー、質問・演習履歴、プロフィール
+- 問題・教材の管理画面（管理者のみ）
 
-## 目的
-- 中間発表で「動く最小MVP」をデモできる状態にする
-- 後から DB や LLM API に置き換えやすい内部構造で実装を進める
+## 技術構成
 
-## 主な機能（現状のMVP）
-- トップページ（概要・導線）
-- 問題演習（静電界のサンプル問題 5問、1問ずつ回答）
-- 回答後の表示：正誤、誤解タイプ、学習アドバイス（テンプレート生成）
-- 理解度表示：分野別スコア（正答率）と回答履歴の概要
+- Next.js 16 App Router / React 19 / TypeScript
+- Prisma 6 / SQLite
+- OpenAI Responses API（サーバー側のみ）
+- Zod / React Hook Form / KaTeX
+- `output: "standalone"` のDockerイメージ
 
-## ローカル起動方法
-前提：Node.js と npm が入っていること
+## ローカルセットアップ
+
+前提: Node.js 20以上、npm
 
 ```bash
 npm install
+cp .env.example .env
+npm run db:generate
+npm run db:migrate -- --name init
+npm run db:seed
 npm run dev
+```
+
+Windows PowerShellでは `cp` の代わりに次を使えます。
+
+```powershell
+Copy-Item .env.example .env
 ```
 
 ブラウザで `http://localhost:3000` を開きます。
 
-## 開発に必要なコマンド
+## 環境変数
+
+| 変数 | 必須 | 用途 |
+| --- | --- | --- |
+| `DATABASE_URL` | 必須 | ローカル標準は `file:./dev.db` |
+| `AUTH_SECRET` | 必須 | JWT署名用。32文字以上のランダム値 |
+| `OPENAI_API_KEY` | 任意 | 未設定・APIエラー時は電磁気専用テンプレートへフォールバック |
+| `UPLOAD_DIR` | 任意 | 未設定時は `data/uploads` |
+
+`OPENAI_API_KEY` はサーバー環境だけに設定してください。`NEXT_PUBLIC_` を付けたり、クライアントコードへ渡したりしないでください。
+
+## seedユーザー
+
+開発用のため、本番ではパスワード変更またはユーザー削除が必要です。
+
+| 権限 | メール | パスワード |
+| --- | --- | --- |
+| 管理者 | `admin@em-study.local` | `Admin123!` |
+| 一般 | `student@em-study.local` | `Student123!` |
+
+seedには管理者1名、一般ユーザー1名、電磁気1・2の診断問題各5問、基礎演習各10問が含まれます。seedはupsert方式で再実行できます。
+
+## 開発コマンド
+
 ```bash
-# 開発サーバ
-npm run dev
-
-# 本番ビルド（必須：成功すること）
-npm run build
-
-# Lint
-npm run lint
+npm run dev          # 開発サーバー
+npm run lint         # ESLint
+npm run build        # 本番ビルド
+npm run db:generate  # Prisma Client生成
+npm run db:migrate   # 開発migration
+npm run db:deploy    # 本番migration適用
+npm run db:seed      # seed投入
 ```
 
-## Docker（本番想定）
-本番公開URL：`https://edesign.tairoh.com`
+## 写真・PDF質問
 
-このプロジェクトは Next.js の `output: "standalone"` を有効化しており、Docker では `server.js`（standalone出力）を起動します。
+- 対応形式: `.png`、`.jpg`、`.jpeg`、`.webp`、`.pdf`
+- 上限: 10MB
+- 保存先: `UPLOAD_DIR`
+- ファイル取得APIはログイン中の所有者を検証します
+- PDFはサーバーでテキスト抽出します
+- OpenAIキーがある場合、画像を視覚入力として解析します
 
-### Docker build（ローカル）
+## 管理画面
+
+管理者でログインし、次を開きます。
+
+- `/admin/problems`: 問題の作成・編集・削除、選択肢と誤答原因の設定
+- `/admin/materials`: PDF・画像・抽出テキスト、科目、年度、タグの登録
+
+回答履歴が存在する問題は、履歴整合性を守るため削除できません。
+
+## Docker
+
+Next.js standalone出力を `server.js` で起動し、起動前にPrisma migrationを適用します。
+
 ```bash
 docker build -t em-ai-learning:local .
+docker volume create em-ai-learning-data
+docker run --rm -p 3000:3000 \
+  -e AUTH_SECRET="replace-with-a-random-secret-of-32-characters" \
+  -e OPENAI_API_KEY="" \
+  -e SEED_ON_START=true \
+  -v em-ai-learning-data:/data \
+  em-ai-learning:local
 ```
 
-### Docker run（ローカル）
-```bash
-docker run --rm -p 3000:3000 em-ai-learning:local
-```
+`SEED_ON_START=true` はローカル確認用です。本番では外し、初期データの投入方法を別途管理してください。DBは `/data/prod.db`、アップロードは `/data/uploads` に保存されます。
 
-ブラウザで `http://localhost:3000` を開きます。
+### ESPRIMO Ubuntu / GHCR
 
-### ESPRIMO Ubuntu（想定）起動コマンド
-（サーバー操作はこのリポジトリでは行いません）
+本番公開URL: `https://edesign.tairoh.com`
 
 ```bash
 docker run -d \
   --name em-ai-learning \
   --restart unless-stopped \
   -p 127.0.0.1:3010:3000 \
+  -e AUTH_SECRET="$AUTH_SECRET" \
+  -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+  -v em-ai-learning-data:/data \
   ghcr.io/<OWNER>/em-ai-learning:main
 ```
 
-#### ホスト側ポート `3010` を使う理由
-- 既存サービス（`ops-ecorun` / `man-ecorun` / `n8n` / `homeassistant`）とポート競合を避けるため
-- Nginx のリバースプロキシが `127.0.0.1:3010` を upstream として参照する前提のため
+ホスト側の `3010` は既存サービスとの競合を避け、Nginxが `127.0.0.1:3010` を参照するためです。
 
-## GitHub Actions（2段階デプロイ）
-このプロジェクトは **既存 ops/man 方式に合わせた2段階** でデプロイします。
+## GitHub Actions
 
 - `docker-publish.yml`：`main` push で Docker image を GHCR に build & push
 - `deploy-to-server.yml`：手動（workflow_dispatch）でサーバーへデプロイ（**ESPRIMO self-hosted runner 上で docker pull 方式**）
 
 必要な Secrets（Repository secrets）:
-- `SSH_HOST`
-- `SSH_USER`
-- `SSH_PORT`
-- `SSH_KEY`
 - `GHCR_READ_TOKEN`（read:packages の PAT。サーバー側 `docker login ghcr.io` 用）
+- `AUTH_SECRET`（32文字以上のランダム値）
+- `OPENAI_API_KEY`（任意。未設定時はフォールバック動作）
 
-初回手順（推奨）:
-1. `main` へ push
-2. `Build and publish Docker image` の完了を確認
-3. `deploy-to-server` を `tag=main` で手動実行
-4. `https://edesign.tairoh.com` を確認
+## 本番運用上の注意
 
-詳細は `docs/deployment.md` を参照してください。
+- `AUTH_SECRET` は32文字以上のランダム値へ変更する
+- seedのテストユーザーを公開環境に残さない
+- `/data` を永続ボリューム化し、DBとアップロードをバックアップする
+- OpenAI利用量、アップロード容量、認証失敗を監視する
+- SQLiteは単一インスタンス向け。水平分割時はPostgreSQLへ移行する
+- HTTPS配下でのみ運用し、秘密情報をGitへコミットしない
 
-## 共同開発の始め方（6人チーム）
-### 1) clone
-```bash
-git clone https://github.com/hitairou/em-ai-learning.git
-cd em-ai-learning
-```
+## 共同開発
 
-### 2) 起動
-```bash
-npm install
-npm run dev
-```
+メンバー向け資料と既存の開発・デプロイ手順は維持しています。
 
-### 3) Issue → Branch → PR
-- まず Issue を作る（または既存 Issue を担当する）
-- ブランチ名例：`feature/5-diagnosis-engine`
-- 作業後は Pull Request を作成し、レビュー後に `main` へマージ
-
-開発フロー詳細：`docs/development-flow.md`
-初期タスク一覧：`docs/initial-issues.md`
-
-### 役割分担案
-- `問題`：問題作成・タグ/難易度
-- `診断`：誤解タイプ・診断ルール
-- `理解度`：理解度指標・計算
-- `UI`：画面・UX
-- `LLM`：プロンプト/将来のAPI接続
-- `インフラ`：Docker/Actions/デプロイ
-- `発表`：発表資料・デモ
-- `資料`：READMEやdocsの整備
-- `アンケート`：評価・アンケート
-
-## メンバー向け資料（まずここから）
-初めて参加する人は，最初に `docs/01-member-start-guide.md` を読んでください．
-標準手順は `docs/03-vscode-copilot-chat.md`（VS Code + GitHub Copilot Chat）です．
-GitHub上のAgentsは有料プラン向けで，Copilot Free / Studentでは使えない場合があります（`Available on paid plans` と表示されたらVS Code手順へ進みます）．
-`deploy-to-server` は小若さん，またはインフラ担当のみが実行します．
-
-- `docs/00-wiki-home.md`
 - `docs/01-member-start-guide.md`
-- `docs/02-github-account-and-copilot-student.md`
-- `docs/03-vscode-copilot-chat.md`
-- `docs/04-github-project-tutorial.md`
-- `docs/05-tutorial-small-change.md`
-- `docs/06-deploy-tutorial.md`
-- `docs/07-troubleshooting-for-members.md`
-- `docs/08-glossary.md`
-- `docs/09-copilot-prompts.md`
-- `docs/90-copilot-cloud-agent.md`（有料プランでAgentが使える人向け）
-
-## 初学者向け：Webアプリ実践チュートリアル
-- `docs/web-app-tutorial/README.md`（章ごとに順番に読めるハンズオン）
-
-## 内部構造（主要ファイル）
-- `src/types/learning.ts`：型定義（Question / Choice / MisconceptionType / DiagnosisResult / LearningScore など）
-- `src/data/questions.ts`：静電界のサンプル問題 5問（選択肢に誤解タイプを付与）
-- `src/lib/diagnosis.ts`：回答から正誤・誤解タイプ・診断文を返す
-- `src/lib/scoring.ts`：回答結果から分野別理解度スコアを更新する
-- `src/lib/feedback.ts`：LLM を使わず、テンプレートで学習アドバイス文を生成する
-- `src/components/`：問題表示・診断結果表示・理解度表示などの UI
-
-※ データは現時点では **DB ではなく localStorage** に保存します（サーバ不要・秘密情報不要）。
-
-## 今後実装する機能（例）
-- 問題数の拡張（タグ/難易度の充実、出題順の最適化）
-- より精密な誤解診断（複数設問の回答パターンから推定）
-- 学習アドバイスの高度化（LLM API 連携に差し替え）
-- 教員用ビュー（クラス全体の傾向など）
-- DB導入（ユーザー・履歴・問題管理）
-
-## 共同開発時の注意
-- **秘密情報（APIキー等）を作成しない／コミットしない**（このMVPは不要です）
-- 変更は基本的にブランチで作業し、Pull Request でレビューしてから取り込む
-- UI とロジックはできるだけ分離する（`src/lib/` に寄せる）
-- 問題データは `src/data/questions.ts` に集約し、型（`src/types/learning.ts`）を崩さない
-- LLM API 連携に備え、`src/lib/feedback.ts` の関数インターフェースは大きく崩さない
+- `docs/development-flow.md`
+- `docs/deployment.md`
+- `docs/web-app-tutorial/README.md`

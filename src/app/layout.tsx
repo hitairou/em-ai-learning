@@ -1,54 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import "katex/dist/katex.min.css";
 import "./globals.css";
 import AppHeader from "@/components/AppHeader";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const themeScript = `(() => {
-  const storedTheme = localStorage.getItem('theme');
-  const preferredTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  const theme = storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : preferredTheme;
-  document.documentElement.dataset.theme = theme;
-})();`;
+import BottomNavigation from "@/components/BottomNavigation";
+import { getCurrentUser } from "@/lib/auth/user";
 
 export const metadata: Metadata = {
-  title: "電気磁気学AI学習支援システム",
-  description: "静電界における誤解診断Webアプリ",
+  title: { default: "EM PASS | 徳島大学 電磁気学習室", template: "%s | EM PASS" },
+  description: "電磁気1・2の苦手を診断し、今日やるべき問題へ導くAI学習支援アプリ",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const user = await getCurrentUser();
   return (
-    <html
-      lang="ja"
-      suppressHydrationWarning
-      data-theme="dark"
-      className={`${geistSans.variable} ${geistMono.variable}`}>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
+    <html lang="ja" data-scroll-behavior="smooth">
       <body>
-        <AppHeader />
-        <main className="container">{children}</main>
-        <footer className="footer">
-          <div className="footerInner">
-            <small>
-              © {new Date().getFullYear()} 電気磁気学AI学習支援（プロトタイプ）
-            </small>
-          </div>
-        </footer>
+        <AppHeader user={user ? { name: user.name, role: user.role } : null} />
+        <main className={user ? "appMain" : "publicMain"}>{children}</main>
+        {user && <BottomNavigation />}
       </body>
     </html>
   );
