@@ -131,7 +131,7 @@ docker run -d \
 ## GitHub Actions
 
 - `docker-publish.yml`：`main` push で Docker image を GHCR に build & push
-- `deploy-to-server.yml`：手動（workflow_dispatch）でサーバーへデプロイ（**ESPRIMO self-hosted runner 上で docker pull 方式**）
+- `deploy-to-server.yml`：通常はESPRIMO self-hosted runner、オフライン時は `transport=ssh` でGitHub-hosted runnerからデプロイ
 
 必要な Secrets（Repository secrets）:
 - `GHCR_READ_TOKEN`（read:packages の PAT。サーバー側 `docker login ghcr.io` 用）

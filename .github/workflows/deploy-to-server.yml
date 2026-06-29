@@ -7,6 +7,15 @@ on:
         description: "Deploy tag (e.g. main or a commit SHA)"
         required: true
         default: main
+        type: string
+      transport:
+        description: "Deployment transport"
+        required: true
+        default: self-hosted
+        type: choice
+        options:
+          - self-hosted
+          - ssh
 
 concurrency:
   group: deploy-em-ai-learning
@@ -19,17 +28,20 @@ permissions:
 env:
   IMAGE: ghcr.io/hitairou/em-ai-learning:${{ github.event.inputs.tag }}
   CONTAINER_NAME: em-ai-learning
+  DATA_VOLUME: em-ai-learning-data
   HOST_PORT: "3010"
   CONTAINER_PORT: "3000"
 
 jobs:
-  deploy:
+  deploy-self-hosted:
+    if: ${{ github.event.inputs.transport == 'self-hosted' }}
     runs-on: [self-hosted, ecorun-esprimo]
     steps:
-      - name: Deploy locally on ESPRIMO (docker pull + restart)
+      - name: Deploy locally on ESPRIMO
         env:
           IMAGE: ${{ env.IMAGE }}
           CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
+          DATA_VOLUME: ${{ env.DATA_VOLUME }}
           HOST_PORT: ${{ env.HOST_PORT }}
           CONTAINER_PORT: ${{ env.CONTAINER_PORT }}
           GHCR_USERNAME: hitairou
@@ -40,35 +52,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ -z "${GHCR_READ_TOKEN:-}" ]; then
-            echo "ERROR: GHCR_READ_TOKEN is missing" >&2
-            exit 1
-          fi
-          if [ -z "${AUTH_SECRET:-}" ]; then
-            echo "ERROR: AUTH_SECRET is missing" >&2
+          if [ -z "${GHCR_READ_TOKEN:-}" ] || [ -z "${AUTH_SECRET:-}" ]; then
+            echo "ERROR: required deployment secret is missing" >&2
             exit 1
           fi
 
           if ! printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null; then
-            echo "WARN: docker login with GHCR_READ_TOKEN failed; retrying with GITHUB_TOKEN" >&2
-            if [ -z "${GITHUB_TOKEN:-}" ]; then
-              echo "ERROR: GITHUB_TOKEN is not available" >&2
-              exit 1
-            fi
-            if ! printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null; then
-              echo "ERROR: docker login ghcr.io failed (both tokens)" >&2
-              exit 1
-            fi
+            printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null
           fi
-          if ! docker pull "$IMAGE" >/dev/null; then
-            echo "ERROR: docker pull failed: $IMAGE" >&2
-            docker logout ghcr.io >/dev/null 2>&1 || true
-            exit 1
-          fi
-          docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
-          docker volume create em-ai-learning-data >/dev/null
+          docker pull "$IMAGE" >/dev/null
+          docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+          docker volume create "$DATA_VOLUME" >/dev/null
           docker run -d \
-            --name "${CONTAINER_NAME}" \
+            --name "$CONTAINER_NAME" \
             --restart unless-stopped \
             -p "127.0.0.1:${HOST_PORT}:${CONTAINER_PORT}" \
             -e NODE_ENV=production \
@@ -78,18 +74,87 @@ jobs:
             -e OPENAI_API_KEY="${OPENAI_API_KEY:-}" \
             -e SEED_ON_START=true \
             -e SEED_TEST_USERS=false \
-            -v em-ai-learning-data:/data \
-            "${IMAGE}" >/dev/null
+            -v "${DATA_VOLUME}:/data" \
+            "$IMAGE" >/dev/null
 
-          for i in $(seq 1 10); do
+          for i in $(seq 1 15); do
             if curl -fsS -I "http://127.0.0.1:${HOST_PORT}" >/dev/null; then
               docker logout ghcr.io >/dev/null 2>&1 || true
               exit 0
             fi
             sleep 2
           done
-
-          echo "healthcheck failed" >&2
-          docker logs --tail 200 "${CONTAINER_NAME}" || true
-          docker logout ghcr.io >/dev/null 2>&1 || true
+          docker logs --tail 200 "$CONTAINER_NAME" || true
           exit 1
+
+  deploy-ssh:
+    if: ${{ github.event.inputs.transport == 'ssh' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check SSH connectivity
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: 2222
+          key: ${{ secrets.SSH_KEY }}
+          timeout: 60s
+          command_timeout: 2m
+          script: |
+            set -euo pipefail
+            docker --version
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          IMAGE: ${{ env.IMAGE }}
+          CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
+          DATA_VOLUME: ${{ env.DATA_VOLUME }}
+          HOST_PORT: ${{ env.HOST_PORT }}
+          CONTAINER_PORT: ${{ env.CONTAINER_PORT }}
+          GHCR_USERNAME: hitairou
+          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: 2222
+          key: ${{ secrets.SSH_KEY }}
+          timeout: 60s
+          command_timeout: 15m
+          envs: IMAGE,CONTAINER_NAME,DATA_VOLUME,HOST_PORT,CONTAINER_PORT,GHCR_USERNAME,GHCR_READ_TOKEN,AUTH_SECRET,OPENAI_API_KEY
+          script: |
+            set -euo pipefail
+            if [ -z "${GHCR_READ_TOKEN:-}" ] || [ -z "${AUTH_SECRET:-}" ]; then
+              echo "ERROR: required deployment secret is missing" >&2
+              exit 1
+            fi
+
+            printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null
+            docker pull "$IMAGE" >/dev/null
+            docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+            docker volume create "$DATA_VOLUME" >/dev/null
+            docker run -d \
+              --name "$CONTAINER_NAME" \
+              --restart unless-stopped \
+              -p "127.0.0.1:${HOST_PORT}:${CONTAINER_PORT}" \
+              -e NODE_ENV=production \
+              -e DATABASE_URL=file:/data/prod.db \
+              -e UPLOAD_DIR=/data/uploads \
+              -e AUTH_SECRET="$AUTH_SECRET" \
+              -e OPENAI_API_KEY="${OPENAI_API_KEY:-}" \
+              -e SEED_ON_START=true \
+              -e SEED_TEST_USERS=false \
+              -v "${DATA_VOLUME}:/data" \
+              "$IMAGE" >/dev/null
+
+            for i in $(seq 1 15); do
+              if curl -fsS -I "http://127.0.0.1:${HOST_PORT}" >/dev/null; then
+                docker logout ghcr.io >/dev/null 2>&1 || true
+                exit 0
+              fi
+              sleep 2
+            done
+            docker logs --tail 200 "$CONTAINER_NAME" || true
+            exit 1
