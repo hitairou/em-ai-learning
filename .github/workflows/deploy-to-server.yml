@@ -114,6 +114,7 @@ jobs:
           CONTAINER_PORT: ${{ env.CONTAINER_PORT }}
           GHCR_USERNAME: hitairou
           GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
@@ -123,15 +124,17 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           timeout: 60s
           command_timeout: 15m
-          envs: IMAGE,CONTAINER_NAME,DATA_VOLUME,HOST_PORT,CONTAINER_PORT,GHCR_USERNAME,GHCR_READ_TOKEN,AUTH_SECRET,OPENAI_API_KEY
+          envs: IMAGE,CONTAINER_NAME,DATA_VOLUME,HOST_PORT,CONTAINER_PORT,GHCR_USERNAME,GHCR_READ_TOKEN,GITHUB_TOKEN,AUTH_SECRET,OPENAI_API_KEY
           script: |
             set -euo pipefail
-            if [ -z "${GHCR_READ_TOKEN:-}" ] || [ -z "${AUTH_SECRET:-}" ]; then
-              echo "ERROR: required deployment secret is missing" >&2
+            if [ -z "${AUTH_SECRET:-}" ]; then
+              echo "ERROR: AUTH_SECRET is missing" >&2
               exit 1
             fi
 
-            printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null
+            if ! printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null; then
+              printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null
+            fi
             docker pull "$IMAGE" >/dev/null
             docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
             docker volume create "$DATA_VOLUME" >/dev/null
