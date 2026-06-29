@@ -35,11 +35,17 @@ jobs:
           GHCR_USERNAME: hitairou
           GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: bash
         run: |
           set -euo pipefail
           if [ -z "${GHCR_READ_TOKEN:-}" ]; then
             echo "ERROR: GHCR_READ_TOKEN is missing" >&2
+            exit 1
+          fi
+          if [ -z "${AUTH_SECRET:-}" ]; then
+            echo "ERROR: AUTH_SECRET is missing" >&2
             exit 1
           fi
 
@@ -60,11 +66,19 @@ jobs:
             exit 1
           fi
           docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+          docker volume create em-ai-learning-data >/dev/null
           docker run -d \
             --name "${CONTAINER_NAME}" \
             --restart unless-stopped \
             -p "127.0.0.1:${HOST_PORT}:${CONTAINER_PORT}" \
             -e NODE_ENV=production \
+            -e DATABASE_URL=file:/data/prod.db \
+            -e UPLOAD_DIR=/data/uploads \
+            -e AUTH_SECRET="$AUTH_SECRET" \
+            -e OPENAI_API_KEY="${OPENAI_API_KEY:-}" \
+            -e SEED_ON_START=true \
+            -e SEED_TEST_USERS=false \
+            -v em-ai-learning-data:/data \
             "${IMAGE}" >/dev/null
 
           for i in $(seq 1 10); do
