@@ -18,6 +18,8 @@ export default function CourseSelector({ initialCourse, initialPurpose }: { init
     setError("");
     const response = await fetch("/api/onboarding/course", {
       method: "POST",
+      credentials: "include",
+      cache: "no-store",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ course, learningPurpose: purpose }),
     });

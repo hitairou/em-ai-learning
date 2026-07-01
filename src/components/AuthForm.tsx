@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 
 type FormValues = { name: string; email: string; password: string };
 
 export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { register, handleSubmit, formState: { errors, isSubmitting }, setError } = useForm<FormValues>();
   const signup = mode === "signup";
@@ -15,6 +14,8 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const submit = handleSubmit(async (values) => {
     const response = await fetch(`/api/auth/${mode}`, {
       method: "POST",
+      credentials: "include",
+      cache: "no-store",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(values),
     });
@@ -24,12 +25,15 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
       return;
     }
     const requested = searchParams.get("next");
-    router.push(signup ? "/onboarding/course" : requested || data.next || "/home");
-    router.refresh();
+    const safeRequested = requested?.startsWith("/") && !requested.startsWith("//") ? requested : null;
+    const destination = signup ? "/onboarding/course" : safeRequested || data.next || "/home";
+
+    // A full navigation ensures the session cookie is committed before protected data is requested.
+    window.location.assign(destination);
   });
 
   return (
-    <form className="authForm" onSubmit={submit}>
+    <form className="authForm" method="post" onSubmit={submit}>
       {signup && (
         <label className="fieldLabel">
           ユーザー名

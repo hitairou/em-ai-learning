@@ -21,13 +21,15 @@ export async function GET(request: NextRequest) {
     take: 3,
   });
 
+  let aiStatus: "not_configured" | "failed" | undefined;
   if (request.nextUrl.searchParams.get("generate") === "1") {
-    const generated = await generatePractice({
+    const generation = await generatePractice({
       course: auth.user.selectedCourse as Course,
       mode,
       weakTopics: weakSkills.map((skill) => skill.topic),
     });
-    if (generated) {
+    if (generation.status === "generated") {
+      const generated = generation.problem;
       const problem = await db.problem.create({
         data: {
           course: auth.user.selectedCourse,
@@ -49,6 +51,7 @@ export async function GET(request: NextRequest) {
       });
       return NextResponse.json({ problem: toProblemView(problem), source: "ai" });
     }
+    aiStatus = generation.status;
   }
 
   const difficulty = mode === "foundation" ? { lte: 2 } : mode === "standard" ? { in: [2, 3] } : { gte: 3 };
@@ -73,5 +76,5 @@ export async function GET(request: NextRequest) {
   });
   problem ??= await db.problem.findFirst({ where: baseWhere, orderBy: { createdAt: "asc" } });
   if (!problem) return NextResponse.json({ error: "該当する演習問題がありません" }, { status: 404 });
-  return NextResponse.json({ problem: toProblemView(problem), source: "database" });
+  return NextResponse.json({ problem: toProblemView(problem), source: "database", aiStatus });
 }

@@ -19,7 +19,11 @@ export default function PracticeHub({ initialProblem }: { initialProblem: Proble
     const data = await response.json();
     if (response.ok) {
       setProblem(data.problem);
-      if (generate && data.source !== "ai") setNotice("AIキー未設定のため、問題DBから苦手に合う問題を選びました。");
+      if (generate && data.source !== "ai") {
+        setNotice(data.aiStatus === "not_configured"
+          ? "AIキー未設定のため、問題DBから苦手に合う問題を選びました。"
+          : "AI問題の生成に失敗したため、問題DBから苦手に合う問題を選びました。");
+      }
     } else setNotice(data.error ?? "問題を取得できませんでした");
     setLoading(false);
   }
