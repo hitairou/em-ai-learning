@@ -46,6 +46,8 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma Client
+        env:
+          DATABASE_URL: file:../tmp/generate.db
         run: npm run db:generate
 
       - name: Prepare test database
