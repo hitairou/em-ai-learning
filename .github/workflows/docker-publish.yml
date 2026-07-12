@@ -1,12 +1,6 @@
 name: Build and publish Docker image
 
 on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - ".github/**"
-      - "README.md"
   workflow_dispatch:
 
 permissions:
@@ -18,38 +12,38 @@ env:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to GHCR
+      - name: Login to GHCR with Actions token
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
 
-      - name: Build and push
+      - name: Build and push amd64 image
         id: build
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: |
-            ${{ env.IMAGE_NAME }}:main
-            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}-amd64
+            ${{ env.IMAGE_NAME }}:main-amd64
 
       - name: Publish image summary
+        shell: bash
         run: |
-          echo "### Published image" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Tag: \`${IMAGE_NAME}:main\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Tag: \`${IMAGE_NAME}:${GITHUB_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Digest: \`${{ steps.build.outputs.digest }}\`" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### Published image"
+            echo "- Tag: \`${IMAGE_NAME}:${GITHUB_SHA}-amd64\`"
+            echo "- Tag: \`${IMAGE_NAME}:main-amd64\`"
+            echo "- Digest: \`${{ steps.build.outputs.digest }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

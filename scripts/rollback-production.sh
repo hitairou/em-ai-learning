@@ -7,13 +7,9 @@ DATA_VOLUME="${DATA_VOLUME:-em-ai-learning-data}"
 HOST_PORT="${HOST_PORT:-3010}"
 CONTAINER_PORT="${CONTAINER_PORT:-3000}"
 PUBLIC_URL="${PUBLIC_URL:-https://edesign.tairoh.com}"
-AUTH_SECRET="${AUTH_SECRET:?AUTH_SECRET is required}"
-OPENAI_API_KEY="${OPENAI_API_KEY:?OPENAI_API_KEY is required}"
+AUTH_SECRET="${AUTH_SECRET:-}"
+OPENAI_API_KEY="${OPENAI_API_KEY:-}"
 
-if [ "${#AUTH_SECRET}" -lt 32 ]; then
-  echo "ERROR: AUTH_SECRET must contain at least 32 characters." >&2
-  exit 1
-fi
 if [ ! -d "$BACKUP_DIR" ]; then
   echo "ERROR: backup directory does not exist." >&2
   exit 1
@@ -22,8 +18,12 @@ if ! docker volume inspect "$DATA_VOLUME" >/dev/null 2>&1; then
   echo "ERROR: production volume $DATA_VOLUME does not exist." >&2
   exit 1
 fi
+if ! command -v openssl >/dev/null; then
+  echo "ERROR: openssl is required." >&2
+  exit 1
+fi
 
-ARCHIVE_PATH="$(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'em-ai-learning-before-834-*.tar.gz' -print -quit)"
+ARCHIVE_PATH="$(find "$BACKUP_DIR" -maxdepth 1 -type f \( -name 'em-ai-learning-before-*.tar.gz' -o -name 'em-ai-learning-before-834-*.tar.gz' \) -print -quit)"
 OLD_IMAGE_ID="$(cat "${BACKUP_DIR}/old-image-id.txt")"
 OLD_IMAGE_REFERENCE="$(cat "${BACKUP_DIR}/old-image-reference.txt")"
 if [ -z "$ARCHIVE_PATH" ] || [ ! -s "$ARCHIVE_PATH" ]; then
@@ -36,6 +36,39 @@ tar -tzf "$ARCHIVE_PATH" | grep -qx './uploads/'
 if ! docker image inspect "$OLD_IMAGE_ID" >/dev/null 2>&1; then
   echo "ERROR: exact old image ID is not available locally: $OLD_IMAGE_ID" >&2
   exit 1
+fi
+
+container_env_value() {
+  local key="$1"
+  if ! docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
+    return 0
+  fi
+  docker inspect "$CONTAINER_NAME" --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null \
+    | awk -v key="$key" 'index($0, key "=") == 1 { print substr($0, length(key) + 2); exit }'
+}
+
+container_auth_secret="$(container_env_value AUTH_SECRET || true)"
+container_openai_api_key="$(container_env_value OPENAI_API_KEY || true)"
+AUTH_SECRET_SOURCE="generated-random"
+if [ -n "$container_auth_secret" ]; then
+  AUTH_SECRET="$container_auth_secret"
+  AUTH_SECRET_SOURCE="existing-container"
+elif [ -n "$AUTH_SECRET" ]; then
+  AUTH_SECRET_SOURCE="environment"
+else
+  AUTH_SECRET="$(openssl rand -base64 48 | tr -d '\n')"
+fi
+if [ "${#AUTH_SECRET}" -lt 32 ]; then
+  echo "ERROR: AUTH_SECRET from ${AUTH_SECRET_SOURCE} is shorter than 32 characters." >&2
+  exit 1
+fi
+
+OPENAI_API_KEY_SOURCE="unset"
+if [ -n "$container_openai_api_key" ]; then
+  OPENAI_API_KEY="$container_openai_api_key"
+  OPENAI_API_KEY_SOURCE="existing-container"
+elif [ -n "$OPENAI_API_KEY" ]; then
+  OPENAI_API_KEY_SOURCE="environment"
 fi
 
 ARCHIVE_NAME="$(basename "$ARCHIVE_PATH")"
@@ -63,7 +96,7 @@ docker run -d \
 for _ in $(seq 1 30); do
   if curl -fsS --max-time 5 "http://127.0.0.1:${HOST_PORT}" >/dev/null 2>&1; then
     curl -fsS --max-time 20 "$PUBLIC_URL" >/dev/null
-    echo "ROLLBACK_RESULT status=success backup=${ARCHIVE_PATH} restored_image=${OLD_IMAGE_REFERENCE} restored_image_id=${OLD_IMAGE_ID}"
+    echo "ROLLBACK_RESULT status=success backup=${ARCHIVE_PATH} restored_image=${OLD_IMAGE_REFERENCE} restored_image_id=${OLD_IMAGE_ID} auth_secret_source=${AUTH_SECRET_SOURCE} openai_api_key_source=${OPENAI_API_KEY_SOURCE}"
     exit 0
   fi
   sleep 2

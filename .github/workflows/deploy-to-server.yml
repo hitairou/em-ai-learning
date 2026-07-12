@@ -2,19 +2,6 @@ name: deploy-to-server
 
 on:
   workflow_dispatch:
-    inputs:
-      tag:
-        description: "Immutable 40-character commit SHA image tag"
-        required: true
-        type: string
-      transport:
-        description: "Deployment transport"
-        required: true
-        default: self-hosted
-        type: choice
-        options:
-          - self-hosted
-          - ssh
 
 concurrency:
   group: deploy-em-ai-learning
@@ -22,10 +9,10 @@ concurrency:
 
 permissions:
   contents: read
-  packages: read
+  packages: write
 
 env:
-  NEW_IMAGE: ghcr.io/hitairou/em-ai-learning:${{ github.event.inputs.tag }}
+  IMAGE_NAME: ghcr.io/hitairou/em-ai-learning
   CONTAINER_NAME: em-ai-learning
   DATA_VOLUME: em-ai-learning-data
   HOST_PORT: "3010"
@@ -33,40 +20,170 @@ env:
   PUBLIC_URL: https://edesign.tairoh.com
 
 jobs:
-  deploy-self-hosted:
-    if: ${{ github.event.inputs.transport == 'self-hosted' }}
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Require main branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF_NAME}" != "main" ]; then
+            echo "Production deploy must be run from main. Current ref: ${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npm run db:generate
+
+      - name: Prepare test database
+        env:
+          DATABASE_URL: file:../tmp/test.db
+          UPLOAD_DIR: ${{ github.workspace }}/tmp/uploads
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p tmp/uploads
+          npx prisma migrate deploy
+          node scripts/import-questions.mjs
+
+      - name: Run tests
+        env:
+          DATABASE_URL: file:../tmp/test.db
+          UPLOAD_DIR: ${{ github.workspace }}/tmp/uploads
+          OPENAI_API_KEY: ""
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        env:
+          DATABASE_URL: file:../tmp/build.db
+          OPENAI_API_KEY: ""
+        run: npm run build
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
+
+      - name: Isolated production database verification
+        env:
+          DATABASE_URL: file:../tmp/ci-production.db
+          UPLOAD_DIR: ${{ github.workspace }}/tmp/ci-production-uploads
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f tmp/ci-production.db tmp/ci-production.db-shm tmp/ci-production.db-wal
+          mkdir -p tmp/ci-production-uploads
+          npx prisma migrate deploy
+          node scripts/import-questions.mjs
+          node scripts/import-questions.mjs
+          node scripts/apply-review-state.mjs
+          node scripts/import-questions.mjs --verify-production
+          node scripts/production-state.mjs
+
+      - name: Validate deployment automation
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/deploy-production.sh
+          bash -n scripts/rollback-production.sh
+          npm run test:deploy
+
+  build-amd64:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR with Actions token
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Set image tag
+        id: image
+        shell: bash
+        run: echo "image=${IMAGE_NAME}:${GITHUB_SHA}-amd64" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push amd64 image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ steps.image.outputs.image }}
+            ${{ env.IMAGE_NAME }}:main-amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Publish image summary
+        shell: bash
+        run: |
+          {
+            echo "### Published image"
+            echo "- Immutable tag: \`${{ steps.image.outputs.image }}\`"
+            echo "- Moving tag: \`${IMAGE_NAME}:main-amd64\`"
+            echo "- Digest: \`${{ steps.build.outputs.digest }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    needs: build-amd64
     runs-on: [self-hosted, ecorun-esprimo]
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    env:
+      NEW_IMAGE: ${{ needs.build-amd64.outputs.image }}
+      GHCR_USERNAME: ${{ github.repository_owner }}
     steps:
       - name: Checkout deployment scripts
         uses: actions/checkout@v4
 
-      - name: Validate immutable tag and required secrets
-        env:
-          DEPLOY_TAG: ${{ github.event.inputs.tag }}
-          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
-          GHCR_FALLBACK_TOKEN: ${{ github.token }}
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      - name: Confirm runner and Docker access
         shell: bash
         run: |
           set -euo pipefail
-          [[ "$DEPLOY_TAG" =~ ^[0-9a-f]{40}$ ]]
-          [ -n "$GHCR_READ_TOKEN" ]
-          [ -n "$GHCR_FALLBACK_TOKEN" ]
-          [ -n "$OPENAI_API_KEY" ]
-          [ "${#AUTH_SECRET}" -ge 32 ]
-          docker version
-          df -h "$HOME"
+          docker version >/dev/null
+          docker volume inspect "$DATA_VOLUME" >/dev/null
+          if ! docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
+            echo "Production container ${CONTAINER_NAME} does not exist on this runner." >&2
+            exit 1
+          fi
 
       - name: Backup, deploy, verify, and rollback on failure
         env:
-          NEW_IMAGE: ${{ env.NEW_IMAGE }}
-          CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
-          DATA_VOLUME: ${{ env.DATA_VOLUME }}
-          HOST_PORT: ${{ env.HOST_PORT }}
-          CONTAINER_PORT: ${{ env.CONTAINER_PORT }}
-          PUBLIC_URL: ${{ env.PUBLIC_URL }}
-          GHCR_USERNAME: hitairou
           GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
           GHCR_FALLBACK_TOKEN: ${{ github.token }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
@@ -76,88 +193,3 @@ jobs:
           ADMIN_BOOTSTRAP_NAME: ${{ secrets.ADMIN_BOOTSTRAP_NAME }}
         shell: bash
         run: bash scripts/deploy-production.sh
-
-  deploy-ssh:
-    if: ${{ github.event.inputs.transport == 'ssh' }}
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout deployment scripts
-        uses: actions/checkout@v4
-
-      - name: Validate immutable tag and required secrets
-        env:
-          DEPLOY_TAG: ${{ github.event.inputs.tag }}
-          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
-          GHCR_FALLBACK_TOKEN: ${{ github.token }}
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_KEY: ${{ secrets.SSH_KEY }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          [[ "$DEPLOY_TAG" =~ ^[0-9a-f]{40}$ ]]
-          [ -n "$GHCR_READ_TOKEN" ]
-          [ -n "$GHCR_FALLBACK_TOKEN" ]
-          [ -n "$OPENAI_API_KEY" ]
-          [ "${#AUTH_SECRET}" -ge 32 ]
-          [ -n "$SSH_HOST" ]
-          [ -n "$SSH_USER" ]
-          [ -n "$SSH_KEY" ]
-          [[ "$SSH_PORT" =~ ^[0-9]+$ ]]
-
-      - name: Check SSH connectivity and disk space
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          port: ${{ secrets.SSH_PORT }}
-          key: ${{ secrets.SSH_KEY }}
-          timeout: 60s
-          command_timeout: 2m
-          script: |
-            set -euo pipefail
-            docker version
-            df -h "$HOME"
-
-      - name: Copy deployment script
-        uses: appleboy/scp-action@v1.0.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          port: ${{ secrets.SSH_PORT }}
-          key: ${{ secrets.SSH_KEY }}
-          source: scripts/deploy-production.sh
-          target: /tmp/em-ai-learning-deploy-${{ github.run_id }}
-
-      - name: Backup, deploy, verify, and rollback on failure
-        uses: appleboy/ssh-action@v1.2.0
-        env:
-          NEW_IMAGE: ${{ env.NEW_IMAGE }}
-          CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
-          DATA_VOLUME: ${{ env.DATA_VOLUME }}
-          HOST_PORT: ${{ env.HOST_PORT }}
-          CONTAINER_PORT: ${{ env.CONTAINER_PORT }}
-          PUBLIC_URL: ${{ env.PUBLIC_URL }}
-          GHCR_USERNAME: hitairou
-          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
-          GHCR_FALLBACK_TOKEN: ${{ github.token }}
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ADMIN_BOOTSTRAP_EMAIL: ${{ secrets.ADMIN_BOOTSTRAP_EMAIL }}
-          ADMIN_BOOTSTRAP_PASSWORD: ${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}
-          ADMIN_BOOTSTRAP_NAME: ${{ secrets.ADMIN_BOOTSTRAP_NAME }}
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          port: ${{ secrets.SSH_PORT }}
-          key: ${{ secrets.SSH_KEY }}
-          timeout: 60s
-          command_timeout: 20m
-          envs: NEW_IMAGE,CONTAINER_NAME,DATA_VOLUME,HOST_PORT,CONTAINER_PORT,PUBLIC_URL,GHCR_USERNAME,GHCR_READ_TOKEN,GHCR_FALLBACK_TOKEN,AUTH_SECRET,OPENAI_API_KEY,ADMIN_BOOTSTRAP_EMAIL,ADMIN_BOOTSTRAP_PASSWORD,ADMIN_BOOTSTRAP_NAME
-          script: |
-            set -euo pipefail
-            bash /tmp/em-ai-learning-deploy-${{ github.run_id }}/scripts/deploy-production.sh
-            rm -rf /tmp/em-ai-learning-deploy-${{ github.run_id }}
