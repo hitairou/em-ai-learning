@@ -64,8 +64,9 @@ The sequence is:
 12. check candidate health, root HTML, JS, CSS, KaTeX CSS, and logs
 13. remove the candidate container
 14. start the production container on port `3010`
-15. check internal and public health, root HTML, JS, CSS, KaTeX CSS, and logs
+15. check internal health, root HTML, JS, CSS, KaTeX CSS, and logs
 16. compare data counts against the pre-deploy snapshot
+17. verify the public URL from a GitHub-hosted runner after the production job succeeds
 
 SQLite writes are not shared across simultaneously running production containers. The old container is stopped before migration and import; the candidate is removed before the final production container starts.
 
@@ -81,7 +82,9 @@ The path may be reported. The email and password values must not be printed in c
 
 ## Automatic rollback
 
-Migration, import, DB verification, candidate health, public health, asset verification, data-preservation, or log checks trigger rollback. Rollback removes the failed container, restores the volume archive, renames and restarts the old container, then requires `http://127.0.0.1:3010` to return HTTP 200.
+Migration, import, DB verification, candidate health, internal production health, internal asset verification, data-preservation, or log checks trigger rollback. Rollback removes the failed container, restores the volume archive, renames and restarts the old container, then requires `http://127.0.0.1:3010` to return HTTP 200.
+
+Public URL verification runs afterward from GitHub-hosted Actions with `scripts/verify-public-deployment.sh`. It checks `/api/health`, `/`, `/login`, Next.js CSS/JS, and KaTeX CSS from outside the production host so host-local public DNS or hairpin routing cannot roll back an otherwise healthy container.
 
 The backup directory contains the volume archive, archive listing, old and new image references, image IDs or digests, sanitized container configuration, secret source labels, and before/after count comparisons.
 

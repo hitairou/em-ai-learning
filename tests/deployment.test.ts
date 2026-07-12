@@ -51,3 +51,20 @@ test("manual rollback can reuse current container secrets without requiring OPEN
   assert.match(script, /container_env_value AUTH_SECRET/);
   assert.match(script, /OPENAI_API_KEY_SOURCE="unset"/);
 });
+
+test("public URL verification runs after deployment from GitHub-hosted Actions", async () => {
+  const workflow = await text(".github/workflows/deploy-to-server.yml");
+  const deployScript = await text("scripts/deploy-production.sh");
+  const publicScript = await text("scripts/verify-public-deployment.sh");
+
+  assert.match(workflow, /public-verify:/);
+  assert.match(workflow, /needs: deploy/);
+  assert.match(workflow, /runs-on: ubuntu-24\.04/);
+  assert.match(workflow, /bash scripts\/verify-public-deployment\.sh/);
+  assert.doesNotMatch(deployScript, /\$\{PUBLIC_URL\}\/api\/health/);
+  assert.match(deployScript, /external_public_verify=deferred/);
+  assert.match(publicScript, /PUBLIC_VERIFY_RESULT status=success/);
+  assert.match(publicScript, /\/api\/health/);
+  assert.match(publicScript, /\/login/);
+  assert.match(publicScript, /katex/i);
+});
