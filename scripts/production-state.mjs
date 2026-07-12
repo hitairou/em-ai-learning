@@ -5,6 +5,12 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+async function tableColumns(tableName) {
+  const escaped = tableName.replaceAll('"', '""');
+  const rows = await prisma.$queryRawUnsafe(`PRAGMA table_info("${escaped}")`);
+  return new Set(rows.map((row) => String(row.name)));
+}
+
 async function uploadStats(directory) {
   let uploadFileCount = 0;
   let uploadBytes = 0;
@@ -23,13 +29,47 @@ async function uploadStats(directory) {
 }
 
 async function snapshot() {
+  const problemColumns = await tableColumns("Problem");
+  const hasAppQuestionId = problemColumns.has("appQuestionId");
+  const hasQuestionGateColumns = [
+    "appQuestionId",
+    "isActive",
+    "humanReviewStatus",
+    "verificationStatus",
+  ].every((column) => problemColumns.has(column));
+  const totalProblemCount = await prisma.problem.count();
+  const canonicalQuestionCount = hasAppQuestionId
+    ? await prisma.problem.count({ where: { appQuestionId: { not: null } } })
+    : 0;
+  const publishedQuestionCount = hasQuestionGateColumns
+    ? await prisma.problem.count({
+      where: {
+        appQuestionId: { not: null },
+        isActive: true,
+        humanReviewStatus: "accepted",
+        verificationStatus: "verified",
+      },
+    })
+    : 0;
+  const invalidPublishedQuestionCount = hasQuestionGateColumns
+    ? await prisma.problem.count({
+      where: {
+        appQuestionId: { not: null },
+        isActive: true,
+        OR: [
+          { humanReviewStatus: { not: "accepted" } },
+          { verificationStatus: { not: "verified" } },
+        ],
+      },
+    })
+    : 0;
+  const legacyProblemCount = hasAppQuestionId
+    ? await prisma.problem.count({ where: { appQuestionId: null } })
+    : totalProblemCount;
+
   const [
     userCount,
     adminCount,
-    canonicalQuestionCount,
-    publishedQuestionCount,
-    invalidPublishedQuestionCount,
-    legacyProblemCount,
     practiceAttemptCount,
     diagnosticAttemptCount,
     diagnosticAnswerCount,
@@ -41,26 +81,6 @@ async function snapshot() {
   ] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { role: "admin" } }),
-    prisma.problem.count({ where: { appQuestionId: { not: null } } }),
-    prisma.problem.count({
-      where: {
-        appQuestionId: { not: null },
-        isActive: true,
-        humanReviewStatus: "accepted",
-        verificationStatus: "verified",
-      },
-    }),
-    prisma.problem.count({
-      where: {
-        appQuestionId: { not: null },
-        isActive: true,
-        OR: [
-          { humanReviewStatus: { not: "accepted" } },
-          { verificationStatus: { not: "verified" } },
-        ],
-      },
-    }),
-    prisma.problem.count({ where: { appQuestionId: null } }),
     prisma.practiceAttempt.count(),
     prisma.diagnosticAttempt.count(),
     prisma.diagnosticAnswer.count(),
