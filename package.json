@@ -14,7 +14,13 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:import:questions": "node scripts/import-questions.mjs",
-    "db:verify:questions": "node scripts/import-questions.mjs --verify-only"
+    "db:verify:questions": "npm run db:verify:questions:production",
+    "db:verify:questions:initial": "node scripts/import-questions.mjs --verify-initial",
+    "db:verify:questions:production": "node scripts/import-questions.mjs --verify-production",
+    "db:review:export": "node scripts/export-review-state.mjs",
+    "db:review:apply": "node scripts/apply-review-state.mjs",
+    "db:ensure-admin": "node scripts/ensure-admin.mjs",
+    "db:state": "node scripts/production-state.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -44,5 +50,8 @@
     "eslint-config-next": "16.2.6",
     "tsx": "^4.23.0",
     "typescript": "^5"
+  },
+  "overrides": {
+    "postcss": "8.5.10"
   }
 }

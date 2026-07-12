@@ -12,6 +12,7 @@ const INITIAL_STATE = {
   appReadyStatus: "pending_human_review",
   isActive: false,
 };
+const STATE_FIELDS = ["humanReviewStatus", "verificationStatus", "appReadyStatus", "isActive"];
 
 const payloadSchema = z.object({
   appQuestionId: z.string().regex(/^Q\d{4}$/),
@@ -97,26 +98,51 @@ function problemData(row) {
   };
 }
 
-async function importRows(rows) {
-  for (let offset = 0; offset < rows.length; offset += 100) {
-    const batch = rows.slice(offset, offset + 100);
-    await prisma.$transaction(
-      batch.map((row) =>
-        prisma.problem.upsert({
-          where: { appQuestionId: row.appQuestionId },
-          update: problemData(row),
-          create: {
-            appQuestionId: row.appQuestionId,
-            ...problemData(row),
-            ...INITIAL_STATE,
-          },
-        }),
-      ),
-    );
-  }
+function sameState(left, right) {
+  return STATE_FIELDS.every((field) => left[field] === right[field]);
 }
 
-async function verify(rows) {
+async function importRows(rows) {
+  const expectedIds = rows.map((row) => row.appQuestionId);
+  const before = await prisma.problem.findMany({
+    where: { appQuestionId: { in: expectedIds } },
+    select: { appQuestionId: true, ...Object.fromEntries(STATE_FIELDS.map((field) => [field, true])) },
+  });
+  const beforeById = new Map(before.map((problem) => [problem.appQuestionId, problem]));
+
+  for (let offset = 0; offset < rows.length; offset += 100) {
+    const batch = rows.slice(offset, offset + 100);
+    await prisma.$transaction(batch.map((row) => prisma.problem.upsert({
+      where: { appQuestionId: row.appQuestionId },
+      update: problemData(row),
+      create: { appQuestionId: row.appQuestionId, ...problemData(row), ...INITIAL_STATE },
+    })));
+  }
+
+  const after = await prisma.problem.findMany({
+    where: { appQuestionId: { in: expectedIds } },
+    select: { appQuestionId: true, ...Object.fromEntries(STATE_FIELDS.map((field) => [field, true])) },
+  });
+  const statePreservationViolationCount = after.filter((problem) => {
+    const previous = beforeById.get(problem.appQuestionId);
+    return previous ? !sameState(previous, problem) : false;
+  }).length;
+  const newProblemInitialStateViolationCount = after.filter((problem) => {
+    return !beforeById.has(problem.appQuestionId) && !sameState(problem, INITIAL_STATE);
+  }).length;
+  const summary = {
+    createdCount: rows.length - before.length,
+    updatedCount: before.length,
+    statePreservationViolationCount,
+    newProblemInitialStateViolationCount,
+  };
+  if (statePreservationViolationCount || newProblemInitialStateViolationCount) {
+    throw new Error(`Question import state verification failed: ${JSON.stringify(summary)}`);
+  }
+  return summary;
+}
+
+async function baseVerification(rows) {
   const expectedIds = rows.map((row) => row.appQuestionId);
   const imported = await prisma.problem.findMany({
     where: { appQuestionId: { in: expectedIds } },
@@ -129,30 +155,103 @@ async function verify(rows) {
     },
   });
   const ids = imported.map((problem) => problem.appQuestionId).filter(Boolean);
-  const unexpectedCount = await prisma.problem.count({
+  const unexpectedCanonicalCount = await prisma.problem.count({
     where: { appQuestionId: { not: null, notIn: expectedIds } },
   });
-  const summary = {
-    expectedCount: EXPECTED_COUNT,
-    importedCount: imported.length,
-    duplicateAppQuestionIdCount: ids.length - new Set(ids).size,
-    missingAppQuestionIdCount: EXPECTED_COUNT - new Set(ids).size,
-    unexpectedCanonicalCount: unexpectedCount,
-    activeCount: imported.filter((problem) => problem.isActive).length,
-    nonUnreviewedCount: imported.filter((problem) => problem.humanReviewStatus !== "unreviewed").length,
-    nonDraftCount: imported.filter((problem) => problem.verificationStatus !== "draft").length,
-    nonPendingReviewCount: imported.filter((problem) => problem.appReadyStatus !== "pending_human_review").length,
+  return {
+    imported,
+    summary: {
+      expectedCount: EXPECTED_COUNT,
+      importedCount: imported.length,
+      duplicateAppQuestionIdCount: ids.length - new Set(ids).size,
+      missingAppQuestionIdCount: EXPECTED_COUNT - new Set(ids).size,
+      unexpectedCanonicalCount,
+    },
   };
-  if (Object.entries(summary).some(([key, value]) => key !== "expectedCount" && value !== (key === "importedCount" ? EXPECTED_COUNT : 0))) {
-    throw new Error(`Question import verification failed: ${JSON.stringify(summary)}`);
+}
+
+function assertBase(summary) {
+  const valid = summary.importedCount === EXPECTED_COUNT
+    && summary.duplicateAppQuestionIdCount === 0
+    && summary.missingAppQuestionIdCount === 0
+    && summary.unexpectedCanonicalCount === 0;
+  if (!valid) throw new Error(`Canonical question verification failed: ${JSON.stringify(summary)}`);
+}
+
+async function verifyInitial(rows) {
+  const { imported, summary } = await baseVerification(rows);
+  const result = {
+    ...summary,
+    activeCount: imported.filter((problem) => problem.isActive).length,
+    nonUnreviewedCount: imported.filter((problem) => problem.humanReviewStatus !== INITIAL_STATE.humanReviewStatus).length,
+    nonDraftCount: imported.filter((problem) => problem.verificationStatus !== INITIAL_STATE.verificationStatus).length,
+    nonPendingReviewCount: imported.filter((problem) => problem.appReadyStatus !== INITIAL_STATE.appReadyStatus).length,
+  };
+  assertBase(result);
+  if (result.activeCount || result.nonUnreviewedCount || result.nonDraftCount || result.nonPendingReviewCount) {
+    throw new Error(`Initial question state verification failed: ${JSON.stringify(result)}`);
   }
-  return summary;
+  return result;
+}
+
+async function verifyProduction(rows) {
+  const { imported, summary } = await baseVerification(rows);
+  const [legacyProblemCount, legacyNormalCandidateCount] = await Promise.all([
+    prisma.problem.count({ where: { appQuestionId: null } }),
+    prisma.problem.count({
+      where: {
+        appQuestionId: null,
+        isActive: true,
+        humanReviewStatus: "accepted",
+        verificationStatus: "verified",
+      },
+    }),
+  ]);
+  const invalidPublishedCount = imported.filter((problem) => (
+    problem.isActive
+    && (problem.humanReviewStatus !== "accepted" || problem.verificationStatus !== "verified")
+  )).length;
+  const disallowedStatusActiveCount = imported.filter((problem) => (
+    problem.isActive
+    && (
+      ["unreviewed", "needs_fix", "rejected"].includes(problem.humanReviewStatus)
+      || problem.verificationStatus === "draft"
+    )
+  )).length;
+  const publishedCount = imported.filter((problem) => (
+    problem.isActive
+    && problem.humanReviewStatus === "accepted"
+    && problem.verificationStatus === "verified"
+  )).length;
+  const result = {
+    ...summary,
+    publishedCount,
+    inactiveCount: imported.length - publishedCount,
+    invalidPublishedCount,
+    disallowedStatusActiveCount,
+    legacyProblemCount,
+    legacyNormalCandidateCount,
+  };
+  assertBase(result);
+  if (invalidPublishedCount || disallowedStatusActiveCount || legacyNormalCandidateCount) {
+    throw new Error(`Production question state verification failed: ${JSON.stringify(result)}`);
+  }
+  return result;
 }
 
 async function main() {
   const rows = await readPayload();
-  if (!process.argv.includes("--verify-only")) await importRows(rows);
-  console.log(JSON.stringify(await verify(rows), null, 2));
+  if (process.argv.includes("--verify-initial")) {
+    console.log(JSON.stringify(await verifyInitial(rows), null, 2));
+    return;
+  }
+  if (process.argv.includes("--verify-production")) {
+    console.log(JSON.stringify(await verifyProduction(rows), null, 2));
+    return;
+  }
+  const importSummary = await importRows(rows);
+  const productionVerification = await verifyProduction(rows);
+  console.log(JSON.stringify({ importSummary, productionVerification }, null, 2));
 }
 
 main()

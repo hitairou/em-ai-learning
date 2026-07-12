@@ -29,7 +29,7 @@ test("database publication gate, learner sanitization, and similar search", asyn
     });
     const publishedSource = await prisma.problem.findFirst({ where: { id: source.id, ...publishedProblemWhere } });
     assert.ok(publishedSource);
-    const candidates = await prisma.problem.findMany({ where: { id: { not: source.id }, course: source.course, ...publishedProblemWhere } });
+    const candidates = await prisma.problem.findMany({ where: { id: candidate.id, course: source.course, ...publishedProblemWhere } });
     assert.equal(rankSimilarProblems(publishedSource, candidates, [])[0]?.id, candidate.id);
 
     const learner = toProblemView(publishedSource);
