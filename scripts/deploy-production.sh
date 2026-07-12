@@ -328,9 +328,6 @@ fi
 curl -fsS --max-time 10 "http://127.0.0.1:${HOST_PORT}/api/health" >/dev/null
 PRODUCTION_ROOT_HTML="$(curl -fsS --max-time 10 "http://127.0.0.1:${HOST_PORT}")"
 check_html_assets "http://127.0.0.1:${HOST_PORT}" "$PRODUCTION_ROOT_HTML"
-curl -fsS --max-time 20 "${PUBLIC_URL}/api/health" >/dev/null
-PUBLIC_ROOT_HTML="$(curl -fsS --max-time 20 "$PUBLIC_URL")"
-check_html_assets "$PUBLIC_URL" "$PUBLIC_ROOT_HTML"
 
 test "$(docker inspect "$CONTAINER_NAME" --format '{{.State.Running}}')" = "true"
 test "$(docker inspect "$CONTAINER_NAME" --format '{{.HostConfig.RestartPolicy.Name}}')" = "unless-stopped"
@@ -349,4 +346,4 @@ trap - ERR
 docker logout ghcr.io >/dev/null 2>&1 || true
 rm -f "/tmp/em-ai-learning-css-${STAMP}.txt" >/dev/null 2>&1 || true
 echo "POSTCHECK_RESULT ${AFTER_STATE_SUMMARY}"
-echo "DEPLOY_RESULT status=success backup=${ARCHIVE_PATH} backup_size=${BACKUP_SIZE} old_image=${OLD_IMAGE_REFERENCE} old_image_id=${OLD_IMAGE_ID} new_image=${NEW_IMAGE} new_digest=${NEW_IMAGE_DIGEST} ghcr_auth_source=${GHCR_AUTH_SOURCE} auth_secret_source=${AUTH_SECRET_SOURCE} openai_api_key_source=${OPENAI_API_KEY_SOURCE} generated_auth_secret=${GENERATED_AUTH_SECRET} admin_bootstrap_source=${ADMIN_BOOTSTRAP_SOURCE} admin_bootstrap_file=${ADMIN_BOOTSTRAP_FILE} rollback_executed=false candidate_port=${CANDIDATE_PORT}"
+echo "DEPLOY_RESULT status=success backup=${ARCHIVE_PATH} backup_size=${BACKUP_SIZE} old_image=${OLD_IMAGE_REFERENCE} old_image_id=${OLD_IMAGE_ID} new_image=${NEW_IMAGE} new_digest=${NEW_IMAGE_DIGEST} ghcr_auth_source=${GHCR_AUTH_SOURCE} auth_secret_source=${AUTH_SECRET_SOURCE} openai_api_key_source=${OPENAI_API_KEY_SOURCE} generated_auth_secret=${GENERATED_AUTH_SECRET} admin_bootstrap_source=${ADMIN_BOOTSTRAP_SOURCE} admin_bootstrap_file=${ADMIN_BOOTSTRAP_FILE} rollback_executed=false candidate_port=${CANDIDATE_PORT} external_public_verify=deferred public_url=${PUBLIC_URL}"

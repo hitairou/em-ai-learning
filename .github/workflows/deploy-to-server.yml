@@ -105,6 +105,7 @@ jobs:
           set -euo pipefail
           bash -n scripts/deploy-production.sh
           bash -n scripts/rollback-production.sh
+          bash -n scripts/verify-public-deployment.sh
           npm run test:deploy
 
   build-amd64:
@@ -195,3 +196,17 @@ jobs:
           ADMIN_BOOTSTRAP_NAME: ${{ secrets.ADMIN_BOOTSTRAP_NAME }}
         shell: bash
         run: bash scripts/deploy-production.sh
+
+  public-verify:
+    needs: deploy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout public verification script
+        uses: actions/checkout@v4
+
+      - name: Verify public production URL
+        shell: bash
+        run: bash scripts/verify-public-deployment.sh
