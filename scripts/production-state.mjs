@@ -26,6 +26,10 @@ async function snapshot() {
   const [
     userCount,
     adminCount,
+    canonicalQuestionCount,
+    publishedQuestionCount,
+    invalidPublishedQuestionCount,
+    legacyProblemCount,
     practiceAttemptCount,
     diagnosticAttemptCount,
     diagnosticAnswerCount,
@@ -37,6 +41,26 @@ async function snapshot() {
   ] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { role: "admin" } }),
+    prisma.problem.count({ where: { appQuestionId: { not: null } } }),
+    prisma.problem.count({
+      where: {
+        appQuestionId: { not: null },
+        isActive: true,
+        humanReviewStatus: "accepted",
+        verificationStatus: "verified",
+      },
+    }),
+    prisma.problem.count({
+      where: {
+        appQuestionId: { not: null },
+        isActive: true,
+        OR: [
+          { humanReviewStatus: { not: "accepted" } },
+          { verificationStatus: { not: "verified" } },
+        ],
+      },
+    }),
+    prisma.problem.count({ where: { appQuestionId: null } }),
     prisma.practiceAttempt.count(),
     prisma.diagnosticAttempt.count(),
     prisma.diagnosticAnswer.count(),
@@ -49,6 +73,11 @@ async function snapshot() {
   return {
     userCount,
     adminCount,
+    canonicalQuestionCount,
+    publishedQuestionCount,
+    unpublishedQuestionCount: canonicalQuestionCount - publishedQuestionCount,
+    invalidPublishedQuestionCount,
+    legacyProblemCount,
     practiceAttemptCount,
     diagnosticAttemptCount,
     diagnosticAnswerCount,
@@ -62,6 +91,17 @@ async function snapshot() {
 
 async function main() {
   const current = await snapshot();
+  const fieldIndex = process.argv.indexOf("--field");
+  if (fieldIndex !== -1) {
+    const field = process.argv[fieldIndex + 1];
+    if (!field || !(field in current)) throw new Error("--field requires a known snapshot field.");
+    console.log(current[field]);
+    return;
+  }
+  if (process.argv.includes("--summary")) {
+    console.log(Object.entries(current).map(([key, value]) => `${key}=${value}`).join(" "));
+    return;
+  }
   const compareIndex = process.argv.indexOf("--compare");
   if (compareIndex === -1) {
     console.log(JSON.stringify(current));
