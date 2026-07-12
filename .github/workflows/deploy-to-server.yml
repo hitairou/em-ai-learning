@@ -44,6 +44,7 @@ jobs:
         env:
           DEPLOY_TAG: ${{ github.event.inputs.tag }}
           GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+          GHCR_FALLBACK_TOKEN: ${{ github.token }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: bash
@@ -51,6 +52,7 @@ jobs:
           set -euo pipefail
           [[ "$DEPLOY_TAG" =~ ^[0-9a-f]{40}$ ]]
           [ -n "$GHCR_READ_TOKEN" ]
+          [ -n "$GHCR_FALLBACK_TOKEN" ]
           [ -n "$OPENAI_API_KEY" ]
           [ "${#AUTH_SECRET}" -ge 32 ]
           docker version
@@ -66,6 +68,7 @@ jobs:
           PUBLIC_URL: ${{ env.PUBLIC_URL }}
           GHCR_USERNAME: hitairou
           GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+          GHCR_FALLBACK_TOKEN: ${{ github.token }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ADMIN_BOOTSTRAP_EMAIL: ${{ secrets.ADMIN_BOOTSTRAP_EMAIL }}
@@ -85,6 +88,7 @@ jobs:
         env:
           DEPLOY_TAG: ${{ github.event.inputs.tag }}
           GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+          GHCR_FALLBACK_TOKEN: ${{ github.token }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
@@ -96,6 +100,7 @@ jobs:
           set -euo pipefail
           [[ "$DEPLOY_TAG" =~ ^[0-9a-f]{40}$ ]]
           [ -n "$GHCR_READ_TOKEN" ]
+          [ -n "$GHCR_FALLBACK_TOKEN" ]
           [ -n "$OPENAI_API_KEY" ]
           [ "${#AUTH_SECRET}" -ge 32 ]
           [ -n "$SSH_HOST" ]
@@ -138,6 +143,7 @@ jobs:
           PUBLIC_URL: ${{ env.PUBLIC_URL }}
           GHCR_USERNAME: hitairou
           GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+          GHCR_FALLBACK_TOKEN: ${{ github.token }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ADMIN_BOOTSTRAP_EMAIL: ${{ secrets.ADMIN_BOOTSTRAP_EMAIL }}
@@ -150,7 +156,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           timeout: 60s
           command_timeout: 20m
-          envs: NEW_IMAGE,CONTAINER_NAME,DATA_VOLUME,HOST_PORT,CONTAINER_PORT,PUBLIC_URL,GHCR_USERNAME,GHCR_READ_TOKEN,AUTH_SECRET,OPENAI_API_KEY,ADMIN_BOOTSTRAP_EMAIL,ADMIN_BOOTSTRAP_PASSWORD,ADMIN_BOOTSTRAP_NAME
+          envs: NEW_IMAGE,CONTAINER_NAME,DATA_VOLUME,HOST_PORT,CONTAINER_PORT,PUBLIC_URL,GHCR_USERNAME,GHCR_READ_TOKEN,GHCR_FALLBACK_TOKEN,AUTH_SECRET,OPENAI_API_KEY,ADMIN_BOOTSTRAP_EMAIL,ADMIN_BOOTSTRAP_PASSWORD,ADMIN_BOOTSTRAP_NAME
           script: |
             set -euo pipefail
             bash /tmp/em-ai-learning-deploy-${{ github.run_id }}/scripts/deploy-production.sh

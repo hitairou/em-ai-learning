@@ -10,6 +10,7 @@ BACKUP_ROOT="${BACKUP_ROOT:-${HOME}/em-ai-learning-backups}"
 GHCR_USERNAME="${GHCR_USERNAME:-hitairou}"
 NEW_IMAGE="${NEW_IMAGE:?NEW_IMAGE is required}"
 GHCR_READ_TOKEN="${GHCR_READ_TOKEN:?GHCR_READ_TOKEN is required}"
+GHCR_FALLBACK_TOKEN="${GHCR_FALLBACK_TOKEN:-}"
 AUTH_SECRET="${AUTH_SECRET:?AUTH_SECRET is required}"
 OPENAI_API_KEY="${OPENAI_API_KEY:?OPENAI_API_KEY is required}"
 
@@ -37,7 +38,13 @@ if [ "${AVAILABLE_KB:-0}" -lt 1048576 ]; then
   exit 1
 fi
 
-printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null
+if ! printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null; then
+  if [ -z "$GHCR_FALLBACK_TOKEN" ]; then
+    echo "ERROR: GHCR authentication failed and no fallback token is available." >&2
+    exit 1
+  fi
+  printf '%s' "$GHCR_FALLBACK_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null
+fi
 docker pull "$NEW_IMAGE" >/dev/null
 
 STAMP="$(date -u +%Y%m%d-%H%M%S)"
