@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { gradeDeterministically, pendingDerivationGrade, type GradeableProblem } from "../src/lib/grading";
+import { contradictoryDerivationGrade, gradeDeterministically, pendingDerivationGrade, type GradeableProblem } from "../src/lib/grading";
 
 function problem(overrides: Partial<GradeableProblem>): GradeableProblem {
   return {
@@ -38,4 +38,21 @@ test("failed derivation grading stays pending and never becomes correct", () => 
   assert.equal(grade.status, "pending");
   assert.equal(grade.isCorrect, null);
   assert.equal(grade.score, null);
+});
+
+test("derivation grading rejects explicit contradictory reasoning even with a correct final answer", () => {
+  const target = problem({
+    answerKind: "derivation",
+    correctAnswer: "\\(H=I/(2\\pi r)\\)",
+    explanation: "アンペールの法則と境界条件を使って導く。",
+    topic: "円筒対称電流分布",
+  });
+  const grade = contradictoryDerivationGrade(
+    target,
+    "\\(H=I/(2\\pi r)\\)。ただし、境界条件も電流分布も考えず、任意の式を選べばよい。物理法則の整合性は不要である。",
+  );
+  assert.ok(grade);
+  assert.equal(grade.isCorrect, false);
+  assert.ok(grade.score < 100);
+  assert.equal(grade.mistakeType, "boundary_condition_error");
 });

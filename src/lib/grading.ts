@@ -33,6 +33,30 @@ export function pendingDerivationGrade(topic: string) {
   };
 }
 
+export function contradictoryDerivationGrade(problem: GradeableProblem, userAnswer: string): CompletedGrade | null {
+  if (problem.answerKind !== "derivation") return null;
+  const normalized = userAnswer.normalize("NFKC").toLowerCase();
+  const hasExplicitContradiction = [
+    /物理法則の?整合性[はがも]?不要/,
+    /境界条件.{0,20}(?:不要|無視|考えず)/,
+    /電流分布.{0,20}(?:不要|無視|考えず)/,
+    /任意の式を選べばよい/,
+    /途中式.{0,20}不要/,
+    /法則.{0,20}不要/,
+  ].some((pattern) => pattern.test(normalized));
+  if (!hasExplicitContradiction) return null;
+  return {
+    status: "completed",
+    isCorrect: false,
+    score: 40,
+    mistakeType: "boundary_condition_error",
+    lawSelection: "最終式に近い記述があっても、根拠として必要な物理法則や境界条件を否定しています。",
+    correction: "最終答だけでなく、使用する法則、境界条件、電流分布や対称性の扱いを整合させてください。",
+    explanation: problem.explanation,
+    nextStep: `${problem.topic}で必要な法則と条件を、式の各段階に対応づけて確認しましょう。`,
+  };
+}
+
 type ChoiceRecord = { id: string; misconceptionType?: MisconceptionType };
 
 function parseJson<T>(value: string, fallback: T): T {
