@@ -1,6 +1,7 @@
 "use client";
 
 import type { Choice, Question } from "@/types/learning";
+import RichMathText from "@/components/RichMathText";
 
 export default function QuestionViewer({
   question,
@@ -18,7 +19,7 @@ export default function QuestionViewer({
         <div className="muted">トピック: {question.topic}</div>
       </div>
       <h2 className="h2">{question.title}</h2>
-      <p className="questionText">{question.questionText}</p>
+      <RichMathText className="questionText" text={question.questionText} />
 
       <div className="choices">
         {question.choices.map((choice) => {
@@ -31,7 +32,7 @@ export default function QuestionViewer({
               onClick={() => onSelect(choice)}
             >
               <span className="choiceId">{choice.id.toUpperCase()}</span>
-              <span className="choiceText">{choice.text}</span>
+              <span className="choiceText"><RichMathText text={choice.text} /></span>
             </button>
           );
         })}
@@ -39,4 +40,3 @@ export default function QuestionViewer({
     </section>
   );
 }
-

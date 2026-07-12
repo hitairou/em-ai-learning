@@ -4,8 +4,9 @@ import type { Problem } from "@prisma/client";
 import { AI_MODEL, getAiClient } from "@/lib/ai/client";
 import { gradeAnswerPrompt } from "@/lib/ai/prompts/grade-answer";
 import { parseAiJson } from "@/lib/ai/helpers";
-import { MISTAKE_TYPES, type GradeResult, type MisconceptionType } from "@/types/learning";
+import { MISTAKE_TYPES, type GradeResult } from "@/types/learning";
 import { parseJson } from "@/lib/json";
+import { gradeDeterministically, pendingDerivationGrade } from "@/lib/grading";
 
 const schema = z.object({
   isCorrect: z.boolean(),
@@ -17,43 +18,27 @@ const schema = z.object({
   nextStep: z.string(),
 });
 
-function normalize(value: string) {
-  return value.toLowerCase().replace(/[\s　.,、。=＝]/g, "");
-}
-
-function fallback(problem: Problem, userAnswer: string): GradeResult {
-  const choices = parseJson<Array<{ id: string; misconceptionType?: MisconceptionType }>>(
-    problem.choicesJson,
-    [],
-  );
-  const normalizedAnswer = normalize(userAnswer);
-  const normalizedCorrect = normalize(problem.correctAnswer);
-  const isCorrect =
-    normalizedAnswer === normalizedCorrect ||
-    (choices.length === 0 && normalizedAnswer.includes(normalizedCorrect));
-  const selected = choices.find((item) => item.id === userAnswer);
-  const mistakeType = isCorrect ? "correct" : selected?.misconceptionType ?? "concept_error";
-  return {
-    isCorrect,
-    score: isCorrect ? 100 : 35,
-    mistakeType,
-    lawSelection: isCorrect ? "必要な法則を適切に使えています。" : `まず「${problem.topic}」で使う法則を明示してください。`,
-    correction: isCorrect ? "修正はありません。" : `正答は「${problem.correctAnswer}」です。符号・向き・単位を順に照合してください。`,
-    explanation: problem.explanation,
-    nextStep: isCorrect ? "同じ構造の標準問題へ進みましょう。" : `${problem.topic}の基礎問題をもう1問解きましょう。`,
-  };
-}
-
 export async function gradeAnswer(problem: Problem, userAnswer: string): Promise<GradeResult> {
+  if (problem.answerKind !== "derivation") return gradeDeterministically(problem, userAnswer);
   const client = getAiClient();
-  if (!client) return fallback(problem, userAnswer);
+  if (!client) return pendingDerivationGrade(problem.topic);
   try {
+    const rubric = {
+      question: problem.questionText,
+      conciseAnswer: problem.correctAnswer,
+      solution: problem.solution,
+      explanation: problem.explanation,
+      requiredFormulas: parseJson<string[]>(problem.requiredFormulasJson, []),
+      keyConcepts: parseJson<string[]>(problem.keyConceptsJson, []),
+      commonMistakes: parseJson<string[]>(problem.commonMistakesJson, []),
+      studentAnswer: userAnswer,
+    };
     const response = await client.responses.create({
       model: AI_MODEL,
-      input: `${gradeAnswerPrompt()}\n問題: ${problem.questionText}\n模範解答: ${problem.solution}\n学生解答: ${userAnswer}`,
+      input: `${gradeAnswerPrompt()}\n保存済み採点基準:\n${JSON.stringify(rubric)}`,
     });
-    return schema.parse(parseAiJson(response.output_text));
+    return { status: "completed", ...schema.parse(parseAiJson(response.output_text)) };
   } catch {
-    return fallback(problem, userAnswer);
+    return pendingDerivationGrade(problem.topic);
   }
 }

@@ -11,7 +11,9 @@ export async function PUT(request: Request, context: RouteContext<"/api/admin/pr
   const { id } = await context.params;
   const parsed = problemSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: firstZodError(parsed.error) }, { status: 400 });
-  const problem = await db.problem.update({ where: { id }, data: problemData(parsed.data) });
+  const current = await db.problem.findUnique({ where: { id } });
+  if (!current) return NextResponse.json({ error: "問題が見つかりません" }, { status: 404 });
+  const problem = await db.problem.update({ where: { id }, data: problemData(parsed.data, current) });
   return NextResponse.json({ problem: toProblemView(problem, true) });
 }
 

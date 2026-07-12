@@ -3,6 +3,8 @@ import { apiUser } from "@/lib/auth/api";
 import { db } from "@/lib/db";
 import { toProblemView } from "@/lib/problems";
 import { parseJson } from "@/lib/json";
+import { findNextPracticeProblem } from "@/lib/problem-bank";
+import { publishedProblemWhere } from "@/lib/problem-policy";
 
 export async function GET() {
   const auth = await apiUser();
@@ -20,24 +22,14 @@ export async function GET() {
       orderBy: { score: "asc" },
     }),
     db.practiceAttempt.findMany({
-      where: { userId: auth.user.id, isCorrect: false },
+      where: { userId: auth.user.id, isCorrect: false, problem: { is: publishedProblemWhere } },
       orderBy: { createdAt: "desc" },
       take: 3,
       include: { problem: true },
     }),
   ]);
-  const weakest = skills[0]?.topic;
-  const recommendation = await db.problem.findFirst({
-    where: {
-      course: auth.user.selectedCourse,
-      sourceType: { in: ["exercise", "ai_generated", "similar"] },
-      ...(weakest ? { topic: weakest } : {}),
-    },
-    orderBy: [{ difficulty: "asc" }, { createdAt: "asc" }],
-  }) ?? await db.problem.findFirst({
-    where: { course: auth.user.selectedCourse, sourceType: "exercise" },
-    orderBy: { difficulty: "asc" },
-  });
+  const mode = auth.user.learningPurpose === "exam" ? "exam" : auth.user.learningPurpose === "foundation" ? "foundation" : "standard";
+  const recommendation = await findNextPracticeProblem({ userId: auth.user.id, course: auth.user.selectedCourse, mode });
   return NextResponse.json({
     course: auth.user.selectedCourse,
     diagnosticScore: diagnostic?.score ?? null,

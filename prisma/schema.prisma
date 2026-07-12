@@ -28,6 +28,7 @@ model User {
 
 model Problem {
   id                   String                    @id @default(cuid())
+  appQuestionId        String?                   @unique
   course               String
   unit                 String
   topic                String
@@ -35,6 +36,11 @@ model Problem {
   difficulty           Int                       @default(1)
   sourceType           String                    @default("exercise")
   sourceYear           Int?
+  questionType         String                    @default("legacy")
+  answerKind           String                    @default("short_text")
+  calculationMode      String                    @default("mixed")
+  parentId             String?
+  parentSourceId       String?
   title                String
   questionText         String
   choicesJson          String?
@@ -45,6 +51,12 @@ model Problem {
   requiredFormulasJson String                    @default("[]")
   commonMistakesJson   String                    @default("[]")
   figureUrlsJson       String                    @default("[]")
+  humanReviewStatus    String                    @default("unreviewed")
+  verificationStatus   String                    @default("draft")
+  appReadyStatus       String                    @default("pending_human_review")
+  isActive             Boolean                   @default(false)
+  estimatedTimeSec     Int                       @default(300)
+  internalMetadataJson String                    @default("{}")
   createdAt            DateTime                  @default(now())
   updatedAt            DateTime                  @updatedAt
   diagnosticAnswers    DiagnosticAnswer[]
@@ -53,6 +65,10 @@ model Problem {
 
   @@index([course, sourceType])
   @@index([course, unit, topic])
+  @@index([course, isActive, humanReviewStatus, verificationStatus])
+  @@index([course, unit, topic, difficulty])
+  @@index([parentSourceId])
+  @@index([appQuestionId])
 }
 
 model DiagnosticAttempt {

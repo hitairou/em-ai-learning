@@ -6,7 +6,7 @@ import { Camera, Dumbbell, Home, RotateCcw, UserRound } from "lucide-react";
 
 const items = [
   { href: "/home", label: "ホーム", icon: Home },
-  { href: "/practice", label: "AI演習", icon: Dumbbell },
+  { href: "/practice", label: "演習", icon: Dumbbell },
   { href: "/camera", label: "写真で質問", icon: Camera, primary: true },
   { href: "/review", label: "復習", icon: RotateCcw },
   { href: "/profile", label: "マイページ", icon: UserRound },

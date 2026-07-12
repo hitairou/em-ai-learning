@@ -39,23 +39,42 @@ export interface Choice {
 
 export interface ProblemView {
   id: string;
+  appQuestionId: string | null;
   course: Course;
   unit: string;
   topic: string;
   subtopic: string | null;
   difficulty: number;
-  sourceType: string;
+  answerKind: string;
+  estimatedTimeSec: number;
   title: string;
   questionText: string;
   choices: Choice[];
+}
+
+export interface AdminProblemView extends ProblemView {
+  sourceType: string;
+  sourceYear: number | null;
+  questionType: string;
+  calculationMode: string;
+  parentId: string | null;
+  parentSourceId: string | null;
+  humanReviewStatus: string;
+  verificationStatus: string;
+  appReadyStatus: string;
+  isActive: boolean;
+  correctAnswer: string;
+  solution: string;
   explanation?: string;
-  requiredFormulas?: string[];
-  commonMistakes?: string[];
+  requiredFormulas: string[];
+  commonMistakes: string[];
+  internalMetadata: Record<string, unknown>;
 }
 
 export interface GradeResult {
-  isCorrect: boolean;
-  score: number;
+  status: "completed" | "pending";
+  isCorrect: boolean | null;
+  score: number | null;
   mistakeType: MisconceptionType;
   lawSelection: string;
   correction: string;
