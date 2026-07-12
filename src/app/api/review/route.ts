@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { apiUser } from "@/lib/auth/api";
 import { db } from "@/lib/db";
 import { parseJson } from "@/lib/json";
+import { publishedProblemWhere } from "@/lib/problem-policy";
 
 export async function GET() {
   const auth = await apiUser();
@@ -12,7 +13,7 @@ export async function GET() {
       orderBy: [{ score: "asc" }, { averageTimeSec: "desc" }],
     }),
     db.practiceAttempt.findMany({
-      where: { userId: auth.user.id, isCorrect: false },
+      where: { userId: auth.user.id, isCorrect: false, problem: { is: publishedProblemWhere } },
       orderBy: { createdAt: "desc" },
       take: 20,
       include: { problem: true },

@@ -1,31 +1,43 @@
 import type { Problem } from "@prisma/client";
-import type { Choice, Course, ProblemView } from "@/types/learning";
+import type { AdminProblemView, Choice, Course, ProblemView } from "@/types/learning";
 import { parseJson } from "@/lib/json";
 
-export function toProblemView(problem: Problem, includeAnswer = false): ProblemView & {
-  correctAnswer?: string;
-  solution?: string;
-} {
-  return {
+export function toProblemView(problem: Problem): ProblemView;
+export function toProblemView(problem: Problem, includeAnswer: false): ProblemView;
+export function toProblemView(problem: Problem, includeAnswer: true): AdminProblemView;
+export function toProblemView(problem: Problem, includeAnswer = false): ProblemView | AdminProblemView {
+  const learnerView: ProblemView = {
     id: problem.id,
+    appQuestionId: problem.appQuestionId,
     course: problem.course as Course,
     unit: problem.unit,
     topic: problem.topic,
     subtopic: problem.subtopic,
     difficulty: problem.difficulty,
-    sourceType: problem.sourceType,
+    answerKind: problem.answerKind,
+    estimatedTimeSec: problem.estimatedTimeSec,
     title: problem.title,
     questionText: problem.questionText,
     choices: parseJson<Choice[]>(problem.choicesJson, []),
-    explanation: includeAnswer ? problem.explanation : undefined,
-    requiredFormulas: includeAnswer
-      ? parseJson<string[]>(problem.requiredFormulasJson, [])
-      : undefined,
-    commonMistakes: includeAnswer
-      ? parseJson<string[]>(problem.commonMistakesJson, [])
-      : undefined,
-    ...(includeAnswer
-      ? { correctAnswer: problem.correctAnswer, solution: problem.solution }
-      : {}),
+  };
+  if (!includeAnswer) return learnerView;
+  return {
+    ...learnerView,
+    sourceType: problem.sourceType,
+    sourceYear: problem.sourceYear,
+    questionType: problem.questionType,
+    calculationMode: problem.calculationMode,
+    parentId: problem.parentId,
+    parentSourceId: problem.parentSourceId,
+    humanReviewStatus: problem.humanReviewStatus,
+    verificationStatus: problem.verificationStatus,
+    appReadyStatus: problem.appReadyStatus,
+    isActive: problem.isActive,
+    correctAnswer: problem.correctAnswer,
+    solution: problem.solution,
+    explanation: problem.explanation,
+    requiredFormulas: parseJson<string[]>(problem.requiredFormulasJson, []),
+    commonMistakes: parseJson<string[]>(problem.commonMistakesJson, []),
+    internalMetadata: parseJson<Record<string, unknown>>(problem.internalMetadataJson, {}),
   };
 }

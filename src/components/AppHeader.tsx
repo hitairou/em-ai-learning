@@ -22,7 +22,7 @@ export default function AppHeader({ user }: { user: HeaderUser | null }) {
             <nav className="desktopNav" aria-label="メインナビゲーション">
               <Link href="/home">ホーム</Link>
               <Link href="/camera">写真で質問</Link>
-              <Link href="/practice">AI演習</Link>
+              <Link href="/practice">演習</Link>
               <Link href="/review">復習</Link>
               <Link href="/profile">マイページ</Link>
               {user.role === "admin" && (

@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { apiUser } from "@/lib/auth/api";
 import { db } from "@/lib/db";
 import { gradeAnswer } from "@/lib/ai/gradeAnswer";
-import { generateSimilarProblem } from "@/lib/ai/generateSimilarProblem";
+import { findSimilarProblem } from "@/lib/problem-bank";
+import { publishedProblemWhere } from "@/lib/problem-policy";
+import { toProblemView } from "@/lib/problems";
 import { recordSkillAttempt } from "@/lib/skills";
 import { firstZodError, practiceSubmitSchema } from "@/lib/validation";
 
@@ -13,21 +15,24 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: firstZodError(parsed.error) }, { status: 400 });
   }
-  const problem = await db.problem.findUnique({ where: { id: parsed.data.problemId } });
-  if (!problem || problem.course !== auth.user.selectedCourse) {
-    return NextResponse.json({ error: "問題を確認できませんでした" }, { status: 404 });
+  const problem = await db.problem.findFirst({
+    where: { id: parsed.data.problemId, course: auth.user.selectedCourse ?? undefined, ...publishedProblemWhere },
+  });
+  if (!problem) return NextResponse.json({ error: "問題を確認できませんでした" }, { status: 404 });
+
+  const grade = await gradeAnswer(problem, parsed.data.userAnswer);
+  if (grade.status === "pending") {
+    return NextResponse.json({ grade, retryable: true }, { status: 202 });
   }
-  const [grade, similar] = await Promise.all([
-    gradeAnswer(problem, parsed.data.userAnswer),
-    generateSimilarProblem(problem),
-  ]);
+
+  const similar = await findSimilarProblem({ userId: auth.user.id, sourceProblemId: problem.id });
   const result = await db.$transaction(async (tx) => {
     const attempt = await tx.practiceAttempt.create({
       data: {
         userId: auth.user.id,
         problemId: problem.id,
         userAnswer: parsed.data.userAnswer,
-        isCorrect: grade.isCorrect,
+        isCorrect: grade.isCorrect === true,
         aiFeedback: JSON.stringify(grade),
         mistakeType: grade.mistakeType,
         answerTimeSec: parsed.data.answerTimeSec,
@@ -38,33 +43,21 @@ export async function POST(request: Request) {
       userId: auth.user.id,
       course: problem.course,
       topic: problem.topic,
-      isCorrect: grade.isCorrect,
+      isCorrect: grade.isCorrect === true,
       answerTimeSec: parsed.data.answerTimeSec,
       hintUsedCount: parsed.data.hintUsedCount,
       mistakeType: grade.mistakeType,
     });
-    const generated = await tx.generatedSimilarProblem.create({
-      data: {
-        userId: auth.user.id,
-        sourceProblemId: problem.id,
-        generatedQuestion: similar.question,
-        generatedSolution: similar.solution,
-        difficulty: similar.difficulty,
-        topic: similar.topic,
-      },
-    });
-    return { attempt, skill, generated };
+    return { attempt, skill };
   });
+
   return NextResponse.json({
     attemptId: result.attempt.id,
     grade,
-    skillScore: result.skill.score,
     correctAnswer: problem.correctAnswer,
     solution: problem.solution,
-    similar: {
-      id: result.generated.id,
-      question: result.generated.generatedQuestion,
-      solution: result.generated.generatedSolution,
-    },
+    explanation: problem.explanation,
+    skillScore: result.skill.score,
+    similar: similar ? toProblemView(similar) : null,
   });
 }

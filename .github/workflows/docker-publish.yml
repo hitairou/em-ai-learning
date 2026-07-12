@@ -37,6 +37,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -45,3 +46,10 @@ jobs:
           tags: |
             ${{ env.IMAGE_NAME }}:main
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Publish image summary
+        run: |
+          echo "### Published image" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Tag: \`${IMAGE_NAME}:main\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Tag: \`${IMAGE_NAME}:${GITHUB_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Digest: \`${{ steps.build.outputs.digest }}\`" >> "$GITHUB_STEP_SUMMARY"

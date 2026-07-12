@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { COURSES, LEARNING_PURPOSES, MISTAKE_TYPES } from "@/types/learning";
+import { HUMAN_REVIEW_STATUSES, VERIFICATION_STATUSES } from "@/lib/problem-policy";
 
 export const signupSchema = z.object({
   name: z.string().trim().min(2, "ユーザー名は2文字以上で入力してください").max(40),
@@ -53,6 +54,7 @@ export const choiceSchema = z.object({
 });
 
 export const problemSchema = z.object({
+  appQuestionId: z.string().trim().regex(/^Q\d{4}$/).optional().nullable(),
   course: z.enum(COURSES),
   unit: z.string().trim().min(1).max(100),
   topic: z.string().trim().min(1).max(100),
@@ -60,6 +62,11 @@ export const problemSchema = z.object({
   difficulty: z.number().int().min(1).max(5),
   sourceType: z.enum(["diagnostic", "past_exam", "exercise", "ai_generated", "similar"]),
   sourceYear: z.number().int().min(1900).max(2200).optional().nullable(),
+  questionType: z.string().trim().min(1).max(200).default("manual"),
+  answerKind: z.enum(["choice", "numeric", "short_text", "derivation"]).default("short_text"),
+  calculationMode: z.string().trim().min(1).max(100).default("mixed"),
+  parentId: z.string().trim().max(200).optional().nullable(),
+  parentSourceId: z.string().trim().max(200).optional().nullable(),
   title: z.string().trim().min(1).max(200),
   questionText: z.string().trim().min(1).max(20000),
   choices: z.array(choiceSchema).max(8).optional(),
@@ -70,7 +77,22 @@ export const problemSchema = z.object({
   requiredFormulas: z.array(z.string().max(500)).max(20).default([]),
   commonMistakes: z.array(z.string().max(500)).max(20).default([]),
   figureUrls: z.array(z.string().max(1000)).max(10).default([]),
+  humanReviewStatus: z.enum(HUMAN_REVIEW_STATUSES).default("unreviewed"),
+  verificationStatus: z.enum(VERIFICATION_STATUSES).default("draft"),
+  isActive: z.boolean().default(false),
+  estimatedTimeSec: z.number().int().min(30).max(7200).default(300),
+  internalMetadata: z.record(z.string(), z.unknown()).default({}),
 });
+
+export const problemReviewSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1).max(834),
+  humanReviewStatus: z.enum(HUMAN_REVIEW_STATUSES).optional(),
+  verificationStatus: z.enum(VERIFICATION_STATUSES).optional(),
+  isActive: z.boolean().optional(),
+}).refine(
+  (value) => value.humanReviewStatus !== undefined || value.verificationStatus !== undefined || value.isActive !== undefined,
+  "変更する状態を指定してください",
+);
 
 export const materialSchema = z.object({
   course: z.enum(COURSES),

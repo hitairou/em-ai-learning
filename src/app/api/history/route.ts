@@ -1,26 +1,22 @@
 import { NextResponse } from "next/server";
 import { apiUser } from "@/lib/auth/api";
 import { db } from "@/lib/db";
+import { publishedProblemWhere } from "@/lib/problem-policy";
 
 export async function GET() {
   const auth = await apiUser();
   if (auth.error || !auth.user) return auth.error;
-  const [questions, practices, similar] = await Promise.all([
+  const [questions, practices] = await Promise.all([
     db.questionSession.findMany({
       where: { userId: auth.user.id },
       orderBy: { createdAt: "desc" },
       take: 50,
     }),
     db.practiceAttempt.findMany({
-      where: { userId: auth.user.id },
+      where: { userId: auth.user.id, problem: { is: publishedProblemWhere } },
       include: { problem: true },
       orderBy: { createdAt: "desc" },
       take: 50,
-    }),
-    db.generatedSimilarProblem.findMany({
-      where: { userId: auth.user.id },
-      orderBy: { createdAt: "desc" },
-      take: 30,
     }),
   ]);
   return NextResponse.json({
@@ -39,6 +35,5 @@ export async function GET() {
       mistakeType: item.mistakeType,
       createdAt: item.createdAt,
     })),
-    similar,
   });
 }

@@ -4,9 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import AnswerInput from "@/components/AnswerInput";
 import AiFeedbackPanel from "@/components/AiFeedbackPanel";
+import RichMathText from "@/components/RichMathText";
 import type { GradeResult, ProblemView } from "@/types/learning";
 
-type Result = { grade: GradeResult; solution: string; similar: { question: string; solution: string }; skillScore: number };
+type Result = {
+  grade: GradeResult;
+  correctAnswer?: string;
+  solution?: string;
+  explanation?: string;
+  similar?: ProblemView | null;
+  skillScore?: number;
+  retryable?: boolean;
+};
 
 export default function PracticeQuestionCard({ problem }: { problem: ProblemView }) {
   const [answer, setAnswer] = useState("");
@@ -16,9 +25,7 @@ export default function PracticeQuestionCard({ problem }: { problem: ProblemView
   const [submitting, setSubmitting] = useState(false);
   const startedAt = useRef(0);
 
-  useEffect(() => {
-    startedAt.current = Date.now();
-  }, []);
+  useEffect(() => { startedAt.current = Date.now(); }, []);
 
   async function submit() {
     setSubmitting(true);
@@ -41,12 +48,39 @@ export default function PracticeQuestionCard({ problem }: { problem: ProblemView
 
   return (
     <div className="stackLarge">
-      <article className="questionCard practiceQuestion"><div className="todayCardMeta"><span>{problem.unit} / {problem.topic}</span><span>難易度 {problem.difficulty}</span></div><h1>{problem.title}</h1><p className="questionBody">{problem.questionText}</p><AnswerInput choices={problem.choices} value={answer} onChange={setAnswer} />
-        {!result && <div className="answerActions"><button type="button" className="hintButton" onClick={() => setHints((value) => value + 1)}>ヒントを見る（{hints}回）</button><button type="button" className="button primaryButton" disabled={!answer.trim() || submitting} onClick={submit}>{submitting ? "採点中..." : "回答を提出"}</button></div>}
+      <article className="questionCard practiceQuestion">
+        <div className="todayCardMeta"><span>{problem.unit} / {problem.topic}</span><span>難易度 {problem.difficulty}</span></div>
+        <h1>{problem.title}</h1>
+        <RichMathText className="questionBody" text={problem.questionText} />
+        <AnswerInput choices={problem.choices} value={answer} onChange={setAnswer} />
+        {(!result || result.retryable) && (
+          <div className="answerActions">
+            <button type="button" className="hintButton" onClick={() => setHints((value) => value + 1)}>ヒントを見る（{hints}回）</button>
+            <button type="button" className="button primaryButton" disabled={!answer.trim() || submitting} onClick={submit}>
+              {submitting ? "採点中..." : result?.retryable ? "AI採点を再試行" : "回答を提出"}
+            </button>
+          </div>
+        )}
         {hints > 0 && !result && <p className="hintBox">まず「{problem.topic}」で使う法則を1つ書き、求める量の単位を確認しましょう。</p>}
         {error && <p className="formError">{error}</p>}
       </article>
-      {result && <><AiFeedbackPanel grade={result.grade} solution={result.solution} similar={result.similar} /><div className="practiceFooter"><span>この単元の到達度: <strong>{result.skillScore}%</strong></span><Link className="button primaryButton" href="/practice">次の問題を選ぶ</Link></div></>}
+      {result && (
+        <>
+          <AiFeedbackPanel
+            grade={result.grade}
+            correctAnswer={result.correctAnswer}
+            solution={result.solution}
+            explanation={result.explanation}
+            similar={result.similar}
+          />
+          {result.skillScore !== undefined && (
+            <div className="practiceFooter">
+              <span>この単元の到達度: <strong>{result.skillScore}%</strong></span>
+              <Link className="button primaryButton" href="/practice">問題選択へ戻る</Link>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
