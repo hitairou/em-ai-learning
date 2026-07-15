@@ -1,9 +1,9 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
+import { SESSION_COOKIE, SESSION_TTL_SECONDS, sessionCookieOptions } from "@/lib/auth/session-cookie";
 
-export const SESSION_COOKIE = "em-study-session";
-const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
+export { SESSION_COOKIE };
 
 export interface SessionPayload {
   userId: string;
@@ -40,13 +40,7 @@ export async function verifySession(token?: string | null): Promise<SessionPaylo
 export async function createSession(payload: SessionPayload) {
   const token = await signSession(payload);
   const store = await cookies();
-  store.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_TTL_SECONDS,
-  });
+  store.set(SESSION_COOKIE, token, sessionCookieOptions());
 }
 
 export async function clearSession() {

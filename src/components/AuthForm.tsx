@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { safeInternalRedirect } from "@/lib/auth/redirects";
 
 type FormValues = { name: string; email: string; password: string };
 
@@ -25,8 +26,9 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
       return;
     }
     const requested = searchParams.get("next");
-    const safeRequested = requested?.startsWith("/") && !requested.startsWith("//") ? requested : null;
-    const destination = signup ? "/onboarding/course" : safeRequested || data.next || "/home";
+    const safeRequested = safeInternalRedirect(requested);
+    const responseNext = safeInternalRedirect(typeof data.next === "string" ? data.next : null);
+    const destination = signup ? "/onboarding/course" : responseNext || safeRequested || "/home";
 
     // A full navigation ensures the session cookie is committed before protected data is requested.
     window.location.assign(destination);
