@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { createSession } from "@/lib/auth/session";
+import { getLoginDestination } from "@/lib/auth/redirects";
 import { loginSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -14,10 +15,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "メールアドレスまたはパスワードが違います" }, { status: 401 });
   }
   await createSession({ userId: user.id, role: user.role });
-  const next = !user.selectedCourse
-    ? "/onboarding/course"
-    : !user.diagnosticCompleted
-      ? "/onboarding/diagnostic"
-      : "/home";
+  const next = getLoginDestination(user);
   return NextResponse.json({ user: { id: user.id, name: user.name }, next });
 }

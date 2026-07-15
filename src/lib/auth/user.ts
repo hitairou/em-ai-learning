@@ -1,10 +1,9 @@
 import "server-only";
-import { cache } from "react";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { readSession } from "@/lib/auth/session";
 
-export const getCurrentUser = cache(async () => {
+export async function getCurrentUser() {
   const session = await readSession();
   if (!session) return null;
   return db.user.findUnique({
@@ -21,7 +20,7 @@ export const getCurrentUser = cache(async () => {
       createdAt: true,
     },
   });
-});
+}
 
 export async function requireUser() {
   const user = await getCurrentUser();
@@ -42,7 +41,7 @@ export async function requireCompletedUser() {
 }
 
 export async function requireAdmin() {
-  const user = await requireCompletedUser();
+  const user = await requireUser();
   if (user.role !== "admin") redirect("/home");
   return user;
 }
