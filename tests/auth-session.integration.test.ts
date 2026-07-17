@@ -9,7 +9,7 @@ import { promisify } from "node:util";
 import test from "node:test";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
-import { SESSION_COOKIE } from "../src/lib/auth/session-cookie";
+import { sessionCookieName } from "../src/lib/auth/session-cookie";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -77,12 +77,13 @@ async function applyMigrations(prisma: PrismaClient) {
 
 function sessionCookie(response: Response) {
   const setCookie = response.headers.get("set-cookie");
+  const cookieName = sessionCookieName("development");
   assert.ok(setCookie, "login response must set a session cookie");
-  assert.match(setCookie, new RegExp(`${SESSION_COOKIE}=`));
+  assert.match(setCookie, new RegExp(`${cookieName}=`));
   assert.match(setCookie, /HttpOnly/i);
   assert.match(setCookie, /SameSite=Lax/i);
   assert.match(setCookie, /Path=\//i);
-  const match = setCookie.match(new RegExp(`${SESSION_COOKIE}=[^;]+`));
+  const match = setCookie.match(new RegExp(`${cookieName}=[^;]+`));
   assert.ok(match, "session cookie value must be present");
   return match[0];
 }
@@ -193,6 +194,30 @@ test("sessions authorize admin pages and learner onboarding in an isolated Next 
     const adminProblemsBody = await adminProblemsApi.json() as { problems: unknown[] };
     assert.ok(Array.isArray(adminProblemsBody.problems));
 
+    const guestMeApi = await fetch(`${baseUrl}/api/auth/me`);
+    assert.equal(guestMeApi.status, 401);
+
+    const duplicateAdminApi = await fetch(`${baseUrl}/api/admin/problems`, {
+      headers: { Cookie: `${sessionCookieName("development")}=invalid; ${adminLogin.cookie}` },
+    });
+    assert.equal(duplicateAdminApi.status, 200);
+
+    const duplicateAdminPage = await fetch(`${baseUrl}/admin/problems`, {
+      headers: { Cookie: `${sessionCookieName("development")}=invalid; ${adminLogin.cookie}` },
+      redirect: "manual",
+    });
+    assert.equal(duplicateAdminPage.status, 200);
+
+    const logoutResponse = await fetch(`${baseUrl}/api/auth/logout`, {
+      method: "POST",
+      headers: { Cookie: adminLogin.cookie },
+    });
+    assert.equal(logoutResponse.status, 200);
+    const logoutSetCookie = logoutResponse.headers.get("set-cookie");
+    assert.ok(logoutSetCookie);
+    assert.match(logoutSetCookie, new RegExp(`${sessionCookieName("development")}=;`));
+    assert.match(logoutSetCookie, /Max-Age=0/i);
+
     const learnerLogin = await login(baseUrl, learner.email);
     assert.equal(learnerLogin.body.next, "/onboarding/course");
 
@@ -243,7 +268,7 @@ test("sessions authorize admin pages and learner onboarding in an isolated Next 
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Cookie: `${SESSION_COOKIE}=invalid`,
+        Cookie: `${sessionCookieName("development")}=invalid`,
       },
       body: JSON.stringify({ course: "em1", learningPurpose: "foundation" }),
     });

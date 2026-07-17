@@ -9,6 +9,7 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "node scripts/run-tests.mjs",
+    "test:e2e": "playwright test",
     "test:deploy": "tsx --test tests/deployment.test.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -42,6 +43,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/katex": "^0.16.8",
     "@types/node": "^20",
     "@types/pdf-parse": "^1.1.5",

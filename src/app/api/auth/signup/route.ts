@@ -8,7 +8,7 @@ import { firstZodError, signupSchema } from "@/lib/validation";
 export async function POST(request: Request) {
   const parsed = signupSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: firstZodError(parsed.error) }, { status: 400 });
+    return authJson({ error: firstZodError(parsed.error) }, { status: 400 });
   }
   try {
     const passwordHash = await bcrypt.hash(parsed.data.password, 12);
@@ -20,11 +20,17 @@ export async function POST(request: Request) {
       },
     });
     await createSession({ userId: user.id, role: user.role });
-    return NextResponse.json({ user: { id: user.id, name: user.name, email: user.email } }, { status: 201 });
+    return authJson({ user: { id: user.id, name: user.name, email: user.email } }, { status: 201 });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return NextResponse.json({ error: "このメールアドレスは登録済みです" }, { status: 409 });
+      return authJson({ error: "このメールアドレスは登録済みです" }, { status: 409 });
     }
-    return NextResponse.json({ error: "アカウントを作成できませんでした" }, { status: 500 });
+    return authJson({ error: "アカウントを作成できませんでした" }, { status: 500 });
   }
+}
+
+function authJson(body: unknown, init: ResponseInit = {}) {
+  const headers = new Headers(init.headers);
+  headers.set("Cache-Control", "private, no-store");
+  return NextResponse.json(body, { ...init, headers });
 }

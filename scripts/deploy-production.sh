@@ -332,6 +332,13 @@ check_html_assets "http://127.0.0.1:${HOST_PORT}" "$PRODUCTION_ROOT_HTML"
 test "$(docker inspect "$CONTAINER_NAME" --format '{{.State.Running}}')" = "true"
 test "$(docker inspect "$CONTAINER_NAME" --format '{{.HostConfig.RestartPolicy.Name}}')" = "unless-stopped"
 docker exec "$CONTAINER_NAME" node scripts/import-questions.mjs --verify-production
+docker exec \
+  -e PUBLIC_URL="$PUBLIC_URL" \
+  -e SESSION_VERIFY_BASE_URL="http://127.0.0.1:${CONTAINER_PORT}" \
+  -e SESSION_VERIFY_HOST="edesign.tairoh.com" \
+  -e SESSION_VERIFY_PROTO="https" \
+  "$CONTAINER_NAME" node scripts/verify-production-session.mjs \
+  | tee "${BACKUP_DIR}/session-verification.json"
 
 if docker logs "$CONTAINER_NAME" 2>&1 | grep -Eqi 'migration failed|question import.*failed|PrismaClient.*Error'; then
   echo "ERROR: production logs contain a migration, import, or Prisma error." >&2

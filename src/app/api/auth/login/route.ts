@@ -8,13 +8,19 @@ import { loginSchema } from "@/lib/validation";
 export async function POST(request: Request) {
   const parsed = loginSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: "メールアドレスとパスワードを確認してください" }, { status: 400 });
+    return authJson({ error: "メールアドレスとパスワードを確認してください" }, { status: 400 });
   }
   const user = await db.user.findUnique({ where: { email: parsed.data.email } });
   if (!user || !(await bcrypt.compare(parsed.data.password, user.passwordHash))) {
-    return NextResponse.json({ error: "メールアドレスまたはパスワードが違います" }, { status: 401 });
+    return authJson({ error: "メールアドレスまたはパスワードが違います" }, { status: 401 });
   }
   await createSession({ userId: user.id, role: user.role });
   const next = getLoginDestination(user);
-  return NextResponse.json({ user: { id: user.id, name: user.name }, next });
+  return authJson({ user: { id: user.id, name: user.name }, next });
+}
+
+function authJson(body: unknown, init: ResponseInit = {}) {
+  const headers = new Headers(init.headers);
+  headers.set("Cache-Control", "private, no-store");
+  return NextResponse.json(body, { ...init, headers });
 }
