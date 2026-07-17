@@ -140,6 +140,7 @@ function extractBlocks(source, directive) {
   const pattern = new RegExp(`\\b${directive}\\s*\\{`, "g");
   for (const match of source.matchAll(pattern)) {
     let depth = 0;
+    let started = false;
     let quote = null;
     let escaped = false;
     for (let index = match.index; index < source.length; index += 1) {
@@ -160,9 +161,12 @@ function extractBlocks(source, directive) {
         quote = character;
         continue;
       }
-      if (character === "{") depth += 1;
+      if (character === "{") {
+        depth += 1;
+        started = true;
+      }
       if (character === "}") depth -= 1;
-      if (depth === 0 && index > match.index) {
+      if (started && depth === 0) {
         blocks.push(source.slice(match.index, index + 1));
         break;
       }
