@@ -45,6 +45,7 @@ jobs:
           runner_uid="$(id -u)"
           runner_gid="$(id -g)"
           docker run --rm \
+            --user 0:0 \
             -v "${GITHUB_WORKSPACE}/test-results:/work/test-results" \
             --entrypoint sh \
             "$current_image" -c "chown -R ${runner_uid}:${runner_gid} /work/test-results"
