@@ -57,7 +57,7 @@ const summary = {
     portBindings,
     authSecretPresent: envNames.has("AUTH_SECRET"),
     nextProcessCount: nodeProcesses.length,
-    loginAndProxyShareContainer: containers.length === 1 && nodeProcesses.length === 1,
+    loginAndProxyShareContainer: containers.length === 1 && /proxy_pass\s+http:\/\/(?:127\.0\.0\.1|localhost):3010\b/.test(targetConfig),
   },
   recentAuthRedirects,
   resources: resourceSnapshot,
