@@ -68,3 +68,15 @@ test("public URL verification runs after deployment from GitHub-hosted Actions",
   assert.match(publicScript, /\/login/);
   assert.match(publicScript, /katex/i);
 });
+
+test("production deploy probes local containers with canonical forwarded headers", async () => {
+  const script = await text("scripts/deploy-production.sh");
+
+  assert.match(script, /PUBLIC_HOST="\$\{PUBLIC_HOST%%\/\*\}"/);
+  assert.match(script, /curl_app\(\)/);
+  assert.match(script, /-H "Host: \$\{PUBLIC_HOST\}"/);
+  assert.match(script, /-H "X-Forwarded-Host: \$\{PUBLIC_HOST\}"/);
+  assert.match(script, /-H "X-Forwarded-Proto: \$\{PUBLIC_PROTO\}"/);
+  assert.match(script, /curl_app 5 "http:\/\/127\.0\.0\.1:\$\{CANDIDATE_PORT\}"/);
+  assert.match(script, /PRODUCTION_ROOT_HTML="\$\(curl_app 10 "http:\/\/127\.0\.0\.1:\$\{HOST_PORT\}"\)"/);
+});

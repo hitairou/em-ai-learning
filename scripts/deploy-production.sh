@@ -6,6 +6,10 @@ DATA_VOLUME="${DATA_VOLUME:-em-ai-learning-data}"
 HOST_PORT="${HOST_PORT:-3010}"
 CONTAINER_PORT="${CONTAINER_PORT:-3000}"
 PUBLIC_URL="${PUBLIC_URL:-https://edesign.tairoh.com}"
+PUBLIC_ORIGIN="${PUBLIC_URL%/}"
+PUBLIC_HOST="${PUBLIC_ORIGIN#*://}"
+PUBLIC_HOST="${PUBLIC_HOST%%/*}"
+PUBLIC_PROTO="${PUBLIC_ORIGIN%%://*}"
 BACKUP_ROOT="${BACKUP_ROOT:-${HOME}/em-ai-learning-backups}"
 GHCR_USERNAME="${GHCR_USERNAME:-hitairou}"
 NEW_IMAGE="${NEW_IMAGE:-${IMAGE:-}}"
@@ -172,6 +176,16 @@ run_state() {
     "$NEW_IMAGE" node scripts/production-state.mjs "$@"
 }
 
+curl_app() {
+  local timeout="$1"
+  shift
+  curl -fsS --max-time "$timeout" \
+    -H "Host: ${PUBLIC_HOST}" \
+    -H "X-Forwarded-Host: ${PUBLIC_HOST}" \
+    -H "X-Forwarded-Proto: ${PUBLIC_PROTO}" \
+    "$@"
+}
+
 check_html_assets() {
   local base_url="$1"
   local html="$2"
@@ -183,8 +197,8 @@ check_html_assets() {
     echo "ERROR: Next.js CSS or JavaScript asset link was not found in HTML." >&2
     return 1
   fi
-  curl -fsS --max-time 10 "${base_url}${css_path}" >/tmp/em-ai-learning-css-${STAMP}.txt
-  curl -fsS --max-time 10 "${base_url}${js_path}" >/dev/null
+  curl_app 10 "${base_url}${css_path}" >/tmp/em-ai-learning-css-${STAMP}.txt
+  curl_app 10 "${base_url}${js_path}" >/dev/null
   if ! grep -qi 'katex' "/tmp/em-ai-learning-css-${STAMP}.txt"; then
     echo "ERROR: KaTeX CSS was not found in the fetched stylesheet." >&2
     return 1
@@ -274,8 +288,8 @@ docker run -d \
 
 candidate_ready=false
 for _ in $(seq 1 45); do
-  if curl -fsS --max-time 5 "http://127.0.0.1:${CANDIDATE_PORT}/api/health" >/dev/null 2>&1 \
-    && curl -fsS --max-time 5 "http://127.0.0.1:${CANDIDATE_PORT}" >/dev/null 2>&1; then
+  if curl_app 5 "http://127.0.0.1:${CANDIDATE_PORT}/api/health" >/dev/null 2>&1 \
+    && curl_app 5 "http://127.0.0.1:${CANDIDATE_PORT}" >/dev/null 2>&1; then
     candidate_ready=true
     break
   fi
@@ -285,7 +299,7 @@ if [ "$candidate_ready" != "true" ]; then
   docker logs --tail 200 "$CANDIDATE_NAME" || true
   false
 fi
-CANDIDATE_ROOT_HTML="$(curl -fsS --max-time 10 "http://127.0.0.1:${CANDIDATE_PORT}")"
+CANDIDATE_ROOT_HTML="$(curl_app 10 "http://127.0.0.1:${CANDIDATE_PORT}")"
 check_html_assets "http://127.0.0.1:${CANDIDATE_PORT}" "$CANDIDATE_ROOT_HTML"
 if docker logs "$CANDIDATE_NAME" 2>&1 | grep -Eqi 'migration failed|question import.*failed|PrismaClient.*Error'; then
   echo "ERROR: candidate logs contain a migration, import, or Prisma error." >&2
@@ -313,8 +327,8 @@ docker run -d \
 
 production_ready=false
 for _ in $(seq 1 45); do
-  if curl -fsS --max-time 5 "http://127.0.0.1:${HOST_PORT}/api/health" >/dev/null 2>&1 \
-    && curl -fsS --max-time 5 "http://127.0.0.1:${HOST_PORT}" >/dev/null 2>&1; then
+  if curl_app 5 "http://127.0.0.1:${HOST_PORT}/api/health" >/dev/null 2>&1 \
+    && curl_app 5 "http://127.0.0.1:${HOST_PORT}" >/dev/null 2>&1; then
     production_ready=true
     break
   fi
@@ -325,8 +339,8 @@ if [ "$production_ready" != "true" ]; then
   false
 fi
 
-curl -fsS --max-time 10 "http://127.0.0.1:${HOST_PORT}/api/health" >/dev/null
-PRODUCTION_ROOT_HTML="$(curl -fsS --max-time 10 "http://127.0.0.1:${HOST_PORT}")"
+curl_app 10 "http://127.0.0.1:${HOST_PORT}/api/health" >/dev/null
+PRODUCTION_ROOT_HTML="$(curl_app 10 "http://127.0.0.1:${HOST_PORT}")"
 check_html_assets "http://127.0.0.1:${HOST_PORT}" "$PRODUCTION_ROOT_HTML"
 
 test "$(docker inspect "$CONTAINER_NAME" --format '{{.State.Running}}')" = "true"
