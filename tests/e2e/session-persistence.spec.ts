@@ -196,6 +196,8 @@ async function applyMigrations(prismaClient: PrismaClient) {
       .split(/\r?\n/)
       .filter((line) => !line.trim().startsWith("--"))
       .join("\n")
+      .replaceAll("CREATE UNIQUE INDEX ", "CREATE UNIQUE INDEX IF NOT EXISTS ")
+      .replaceAll("CREATE INDEX ", "CREATE INDEX IF NOT EXISTS ")
       .split(";")
       .map((statement) => statement.trim())
       .filter(Boolean);
