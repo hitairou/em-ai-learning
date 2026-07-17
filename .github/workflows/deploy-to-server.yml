@@ -18,9 +18,11 @@ env:
   HOST_PORT: "3010"
   CONTAINER_PORT: "3000"
   PUBLIC_URL: https://edesign.tairoh.com
+  FIREFOX_EXPERIMENT_BRANCH: fix/production-firefox-session-persistence
 
 jobs:
   diagnose-firefox-session:
+    needs: public-verify
     if: github.ref_name == 'fix/production-firefox-session-persistence'
     uses: ./.github/workflows/diagnose-production-session.yml
 
@@ -31,13 +33,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Require main branch
+      - name: Require main branch or approved Firefox experiment
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${GITHUB_REF_NAME}" != "main" ]; then
-            echo "Production deploy must be run from main. Current ref: ${GITHUB_REF_NAME}" >&2
+          if [ "${GITHUB_REF_NAME}" != "main" ] && [ "${GITHUB_REF_NAME}" != "${FIREFOX_EXPERIMENT_BRANCH}" ]; then
+            echo "Production deploy must be run from main or the approved Firefox experiment branch. Current ref: ${GITHUB_REF_NAME}" >&2
             exit 1
+          fi
+          if [ "${GITHUB_REF_NAME}" = "${FIREFOX_EXPERIMENT_BRANCH}" ]; then
+            git fetch origin main --depth=1
+            app_changes="$(git diff --name-only origin/main...HEAD -- src | sort)"
+            if [ "$app_changes" != "src/components/AppHeader.tsx" ]; then
+              echo "Firefox experiment must change only src/components/AppHeader.tsx at runtime." >&2
+              printf '%s\n' "$app_changes" >&2
+              exit 1
+            fi
           fi
 
       - name: Set up Node.js
@@ -150,7 +161,7 @@ jobs:
           platforms: linux/amd64
           tags: |
             ${{ steps.image.outputs.image }}
-            ${{ env.IMAGE_NAME }}:main-amd64
+            ${{ github.ref_name == 'main' && format('{0}:main-amd64', env.IMAGE_NAME) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

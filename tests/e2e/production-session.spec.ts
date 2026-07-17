@@ -52,6 +52,7 @@ test("production session survives public browser navigation", async ({ browser, 
   const password = requiredEnv("PRODUCTION_E2E_PASSWORD");
   const isMobile = testInfo.project.name.includes("mobile");
   const email = requiredEnv(isMobile ? "PRODUCTION_E2E_LEARNER_EMAIL" : "PRODUCTION_E2E_ADMIN_EMAIL");
+  const landingPath = isMobile ? "/home" : "/admin/problems";
   const waitMs = Number(process.env.PRODUCTION_E2E_WAIT_MS ?? "0");
   const rawHarPath = testInfo.outputPath("network.raw.har");
   const sanitizedHarPath = testInfo.outputPath("network.sanitized.har");
@@ -79,7 +80,7 @@ test("production session survives public browser navigation", async ({ browser, 
   let testSucceeded = false;
 
   try {
-    const loginResponse = await login(page, baseURL, email, password);
+    const loginResponse = await login(page, baseURL, email, password, landingPath);
     const loginHeaders = await loginResponse.headersArray();
     loginSetCookies = safeSetCookies(loginHeaders);
     assertLoginSetCookies(loginSetCookies);
@@ -179,7 +180,7 @@ test("production session survives public browser navigation", async ({ browser, 
   }
 });
 
-async function login(page: Page, baseURL: string, email: string, password: string) {
+async function login(page: Page, baseURL: string, email: string, password: string, landingPath: string) {
   await page.goto(new URL("/login", baseURL).toString(), { waitUntil: "domcontentloaded" });
   const responsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());
@@ -191,7 +192,7 @@ async function login(page: Page, baseURL: string, email: string, password: strin
   const response = await responsePromise;
   expect(response.status()).toBe(200);
   await page.waitForURL((url) => url.pathname !== "/login", { waitUntil: "domcontentloaded" });
-  assertProtectedPath(page, "/home");
+  assertProtectedPath(page, landingPath);
   return response;
 }
 
