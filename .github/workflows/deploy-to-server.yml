@@ -20,6 +20,10 @@ env:
   PUBLIC_URL: https://edesign.tairoh.com
 
 jobs:
+  diagnose-firefox-session:
+    if: github.ref_name == 'fix/production-firefox-session-persistence'
+    uses: ./.github/workflows/diagnose-production-session.yml
+
   verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
