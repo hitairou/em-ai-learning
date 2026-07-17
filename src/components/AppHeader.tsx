@@ -10,7 +10,7 @@ export default function AppHeader({ user }: { user: HeaderUser | null }) {
   return (
     <header className="siteHeader">
       <div className="headerInner">
-        <Link className="brand" href={user ? "/home" : "/"}>
+        <Link className="brand" href={user ? "/home" : "/"} prefetch={user ? false : undefined}>
           <span className="brandMark">E</span>
           <span>
             EM PASS
@@ -20,13 +20,13 @@ export default function AppHeader({ user }: { user: HeaderUser | null }) {
         {user ? (
           <div className="desktopHeaderActions">
             <nav className="desktopNav" aria-label="メインナビゲーション">
-              <Link href="/home">ホーム</Link>
-              <Link href="/camera">写真で質問</Link>
-              <Link href="/practice">演習</Link>
-              <Link href="/review">復習</Link>
-              <Link href="/profile">マイページ</Link>
+              <Link href="/home" prefetch={false}>ホーム</Link>
+              <Link href="/camera" prefetch={false}>写真で質問</Link>
+              <Link href="/practice" prefetch={false}>演習</Link>
+              <Link href="/review" prefetch={false}>復習</Link>
+              <Link href="/profile" prefetch={false}>マイページ</Link>
               {user.role === "admin" && (
-                <Link href="/admin/problems"><ShieldCheck size={16} />管理</Link>
+                <Link href="/admin/problems" prefetch={false}><ShieldCheck size={16} />管理</Link>
               )}
             </nav>
             <span className="headerUser">{user.name}</span>

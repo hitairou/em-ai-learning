@@ -10,6 +10,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "node scripts/run-tests.mjs",
     "test:e2e": "playwright test",
+    "test:e2e:production": "playwright test --config=playwright.production.config.ts",
     "test:deploy": "tsx --test tests/deployment.test.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

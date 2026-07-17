@@ -1,0 +1,155 @@
+name: diagnose-production-session
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: diagnose-production-session
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CONTAINER_NAME: em-ai-learning
+  DATA_VOLUME: em-ai-learning-data
+  PUBLIC_URL: https://edesign.tairoh.com
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, ecorun-esprimo]
+    timeout-minutes: 30
+    steps:
+      - name: Checkout diagnostic branch
+        uses: actions/checkout@v4
+
+      - name: Confirm production target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(docker ps --filter "name=^/${CONTAINER_NAME}$" --format '{{.Names}}' | wc -l)" -eq 1
+          test "$(docker inspect "$CONTAINER_NAME" --format '{{.State.Running}}')" = "true"
+          docker volume inspect "$DATA_VOLUME" >/dev/null
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        env:
+          DATABASE_URL: file:../tmp/diagnostic-generate.db
+        run: npm run db:generate
+
+      - name: Record pre-test production state and auth redirects
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p test-results/production-observation
+          AUTH_LOG_SINCE=24h node scripts/inspect-production-auth-path.mjs \
+            | tee test-results/production-observation/before.json
+
+      - name: Create managed temporary users
+        shell: bash
+        run: |
+          set -euo pipefail
+          marker="production-e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          password="A1$(openssl rand -hex 24)z9"
+          admin_email="${marker}-admin@example.test"
+          learner_email="${marker}-learner@example.test"
+          for value in "$marker" "$password" "$admin_email" "$learner_email"; do
+            echo "::add-mask::$value"
+          done
+          {
+            echo "PRODUCTION_E2E_MARKER=$marker"
+            echo "PRODUCTION_E2E_PASSWORD=$password"
+            echo "PRODUCTION_E2E_ADMIN_EMAIL=$admin_email"
+            echo "PRODUCTION_E2E_LEARNER_EMAIL=$learner_email"
+            echo "PRODUCTION_E2E_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } >> "$GITHUB_ENV"
+          current_image="$(docker inspect "$CONTAINER_NAME" --format '{{.Config.Image}}')"
+          docker run --rm --network none \
+            -e DATABASE_URL=file:/data/prod.db \
+            -e PRODUCTION_E2E_MARKER="$marker" \
+            -e PRODUCTION_E2E_PASSWORD="$password" \
+            -v "${DATA_VOLUME}:/data" \
+            -v "${GITHUB_WORKSPACE}/scripts/manage-production-e2e-user.mjs:/app/scripts/manage-production-e2e-user.mjs:ro" \
+            --entrypoint node \
+            "$current_image" scripts/manage-production-e2e-user.mjs create
+
+      - name: Start resource sampling
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/sample-production-resources.mjs \
+            test-results/production-observation/resources.jsonl &
+          echo "RESOURCE_SAMPLER_PID=$!" >> "$GITHUB_ENV"
+
+      - name: Run public production browser E2E
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --init --ipc=host \
+            -e CI=1 \
+            -e PRODUCTION_E2E=1 \
+            -e PRODUCTION_E2E_BASE_URL="$PUBLIC_URL" \
+            -e PRODUCTION_E2E_PASSWORD="$PRODUCTION_E2E_PASSWORD" \
+            -e PRODUCTION_E2E_ADMIN_EMAIL="$PRODUCTION_E2E_ADMIN_EMAIL" \
+            -e PRODUCTION_E2E_LEARNER_EMAIL="$PRODUCTION_E2E_LEARNER_EMAIL" \
+            -e PRODUCTION_E2E_WAIT_MS=30000 \
+            -v "${GITHUB_WORKSPACE}:/work" \
+            -w /work \
+            mcr.microsoft.com/playwright:v1.61.1-noble \
+            npm run test:e2e:production
+
+      - name: Stop resource sampling
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${RESOURCE_SAMPLER_PID:-}" ]; then
+            kill "$RESOURCE_SAMPLER_PID" >/dev/null 2>&1 || true
+            wait "$RESOURCE_SAMPLER_PID" >/dev/null 2>&1 || true
+          fi
+
+      - name: Record test-window auth redirects and production state
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p test-results/production-observation
+          AUTH_LOG_SINCE="${PRODUCTION_E2E_STARTED_AT:-10m}" node scripts/inspect-production-auth-path.mjs \
+            | tee test-results/production-observation/after.json
+
+      - name: Delete managed temporary users
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${PRODUCTION_E2E_MARKER:-}" ]; then
+            exit 0
+          fi
+          current_image="$(docker inspect "$CONTAINER_NAME" --format '{{.Config.Image}}')"
+          docker run --rm --network none \
+            -e DATABASE_URL=file:/data/prod.db \
+            -e PRODUCTION_E2E_MARKER="$PRODUCTION_E2E_MARKER" \
+            -v "${DATA_VOLUME}:/data" \
+            -v "${GITHUB_WORKSPACE}/scripts/manage-production-e2e-user.mjs:/app/scripts/manage-production-e2e-user.mjs:ro" \
+            --entrypoint node \
+            "$current_image" scripts/manage-production-e2e-user.mjs delete
+
+      - name: Upload redacted production diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-session-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            test-results/**/network.sanitized.har
+            test-results/**/session-summary.json
+            test-results/production-observation/*.json
+            test-results/production-observation/*.jsonl
