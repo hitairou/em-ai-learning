@@ -43,7 +43,7 @@ jobs:
           fi
           if [ "${GITHUB_REF_NAME}" = "${FIREFOX_EXPERIMENT_BRANCH}" ]; then
             git fetch origin main --depth=1
-            app_changes="$(git diff --name-only origin/main...HEAD -- src | sort)"
+            app_changes="$(git diff --name-only origin/main HEAD -- src | sort)"
             if [ "$app_changes" != "src/components/AppHeader.tsx" ]; then
               echo "Firefox experiment must change only src/components/AppHeader.tsx at runtime." >&2
               printf '%s\n' "$app_changes" >&2
