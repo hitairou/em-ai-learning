@@ -114,6 +114,7 @@ jobs:
         run: |
           set -euo pipefail
           docker run --rm --init --ipc=host --network host \
+            --add-host edesign.tairoh.com:127.0.0.1 \
             --user "$(id -u):$(id -g)" \
             -e CI=1 \
             -e PRODUCTION_E2E=1 \
