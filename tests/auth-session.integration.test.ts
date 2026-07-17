@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile, spawn, type ChildProcess } from "node:child_process";
+import { once } from "node:events";
 import { mkdtemp, mkdir, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -51,12 +52,14 @@ async function waitForServer(baseUrl: string, child: ChildProcess, output: () =>
 }
 
 async function stopServer(child: ChildProcess) {
-  if (!child.pid || child.exitCode !== null) return;
+  if (!child.pid || child.exitCode !== null || child.signalCode !== null) return;
   if (process.platform === "win32") {
     await execFileAsync("taskkill", ["/pid", String(child.pid), "/t", "/f"]).catch(() => undefined);
     return;
   }
+  const exited = once(child, "exit");
   child.kill("SIGTERM");
+  await exited;
 }
 
 async function applyMigrations(prisma: PrismaClient) {
