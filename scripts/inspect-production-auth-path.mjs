@@ -6,7 +6,9 @@ const publicHost = new URL(process.env.PUBLIC_URL ?? "https://edesign.tairoh.com
 
 const nginxOutput = nginxConfig();
 const serverBlocks = extractBlocks(nginxOutput, "server");
-const targetBlocks = serverBlocks.filter((block) => new RegExp(`\\bserver_name\\s+[^;]*\\b${escapeRegExp(publicHost)}\\b`).test(block));
+const hostBlocks = serverBlocks.filter((block) => new RegExp(`\\bserver_name\\s+[^;]*\\b${escapeRegExp(publicHost)}\\b`).test(block));
+const upstreamBlocks = serverBlocks.filter((block) => /proxy_pass\s+http:\/\/(?:127\.0\.0\.1|localhost):3010\b/.test(block));
+const targetBlocks = hostBlocks.length ? hostBlocks : upstreamBlocks;
 if (!targetBlocks.length) throw new Error(`Nginx server block for ${publicHost} was not found`);
 
 const targetConfig = targetBlocks.join("\n");
@@ -28,6 +30,7 @@ const summary = {
   event: "PRODUCTION_AUTH_PATH_INSPECTION",
   nginx: {
     targetServerBlockCount: targetBlocks.length,
+    selectedBy: hostBlocks.length ? "server_name" : "production_upstream",
     directives,
     proxyPassToProductionPort: /proxy_pass\s+http:\/\/127\.0\.0\.1:3010\b/.test(targetConfig),
     forwardsHost: /proxy_set_header\s+Host\s+\$host\s*;/.test(targetConfig),
@@ -61,12 +64,9 @@ console.log(JSON.stringify(summary));
 
 function nginxConfig() {
   for (const [command, args] of [["sudo", ["-n", "nginx", "-T"]], ["nginx", ["-T"]]]) {
-    try {
-      return execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
-    } catch (error) {
-      const stderr = error && typeof error === "object" && "stderr" in error ? String(error.stderr) : "";
-      if (stderr.includes("configuration file")) return stderr;
-    }
+    const result = spawnSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+    if (result.status === 0 && output.trim()) return output;
   }
   throw new Error("Unable to read the active Nginx configuration");
 }
