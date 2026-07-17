@@ -1,5 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
 
 const containerName = process.env.CONTAINER_NAME ?? "em-ai-learning";
 const publicHost = new URL(process.env.PUBLIC_URL ?? "https://edesign.tairoh.com").host;
@@ -10,7 +11,6 @@ const serverBlocks = extractBlocks(nginxOutput, "server");
 const hostBlocks = serverBlocks.filter((block) => new RegExp(`\\bserver_name\\s+[^;]*\\b${escapeRegExp(publicHost)}\\b`).test(block));
 const upstreamBlocks = serverBlocks.filter((block) => /proxy_pass\s+http:\/\/(?:127\.0\.0\.1|localhost):3010\b/.test(block));
 const targetBlocks = hostBlocks.length ? hostBlocks : upstreamBlocks;
-if (!targetBlocks.length) throw new Error(`Nginx server block for ${publicHost} was not found`);
 
 const targetConfig = targetBlocks.join("\n");
 const directives = [...targetConfig.matchAll(/^\s*(listen|server_name|location|proxy_pass|proxy_set_header|proxy_cookie_domain|proxy_cookie_path|proxy_hide_header|add_header|proxy_cache|fastcgi_cache|gzip|brotli)\b([^;{]*)(?:[;{])/gmi)]
@@ -30,9 +30,10 @@ const resourceSnapshot = resources();
 const summary = {
   event: "PRODUCTION_AUTH_PATH_INSPECTION",
   nginx: {
+    available: Boolean(targetBlocks.length),
     source: nginx.source,
     targetServerBlockCount: targetBlocks.length,
-    selectedBy: hostBlocks.length ? "server_name" : "production_upstream",
+    selectedBy: hostBlocks.length ? "server_name" : upstreamBlocks.length ? "production_upstream" : "unavailable",
     directives,
     proxyPassToProductionPort: /proxy_pass\s+http:\/\/127\.0\.0\.1:3010\b/.test(targetConfig),
     forwardsHost: /proxy_set_header\s+Host\s+\$host\s*;/.test(targetConfig),
@@ -65,7 +66,12 @@ const summary = {
 console.log(JSON.stringify(summary));
 
 function nginxConfig() {
-  for (const [command, args] of [["sudo", ["-n", "nginx", "-T"]], ["nginx", ["-T"]]]) {
+  for (const [command, args] of [
+    ["sudo", ["-n", "/usr/sbin/nginx", "-T"]],
+    ["/usr/sbin/nginx", ["-T"]],
+    ["sudo", ["-n", "nginx", "-T"]],
+    ["nginx", ["-T"]],
+  ]) {
     const result = spawnSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
     const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
     if (result.status === 0 && output.trim()) return { output, source: command === "sudo" ? "host-sudo" : "host" };
@@ -81,7 +87,38 @@ function nginxConfig() {
     const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
     if (result.status === 0 && output.trim()) return { output, source: `container:${candidate.Names}` };
   }
-  throw new Error("Unable to read the active Nginx configuration");
+
+  const filesystemConfig = readNginxConfigFiles("/etc/nginx");
+  if (filesystemConfig) return { output: filesystemConfig, source: "filesystem:/etc/nginx" };
+  return { output: "", source: "unavailable" };
+}
+
+function readNginxConfigFiles(root) {
+  const collected = [];
+  const visit = (directory) => {
+    let entries = [];
+    try {
+      entries = readdirSync(directory, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const fullPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        visit(fullPath);
+      } else if (entry.isFile() || entry.isSymbolicLink()) {
+        const relative = path.relative(root, fullPath).replaceAll("\\", "/");
+        if (!entry.name.endsWith(".conf") && !relative.startsWith("sites-enabled/") && !relative.startsWith("sites-available/")) continue;
+        try {
+          collected.push(`# source: ${relative}\n${readFileSync(fullPath, "utf8")}`);
+        } catch {
+          // Unreadable files are reported by the unavailable source when no target block can be found.
+        }
+      }
+    }
+  };
+  visit(root);
+  return collected.join("\n");
 }
 
 function docker(args) {
