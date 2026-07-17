@@ -4,7 +4,8 @@ import { readFileSync } from "node:fs";
 const containerName = process.env.CONTAINER_NAME ?? "em-ai-learning";
 const publicHost = new URL(process.env.PUBLIC_URL ?? "https://edesign.tairoh.com").host;
 
-const nginxOutput = nginxConfig();
+const nginx = nginxConfig();
+const nginxOutput = nginx.output;
 const serverBlocks = extractBlocks(nginxOutput, "server");
 const hostBlocks = serverBlocks.filter((block) => new RegExp(`\\bserver_name\\s+[^;]*\\b${escapeRegExp(publicHost)}\\b`).test(block));
 const upstreamBlocks = serverBlocks.filter((block) => /proxy_pass\s+http:\/\/(?:127\.0\.0\.1|localhost):3010\b/.test(block));
@@ -29,6 +30,7 @@ const resourceSnapshot = resources();
 const summary = {
   event: "PRODUCTION_AUTH_PATH_INSPECTION",
   nginx: {
+    source: nginx.source,
     targetServerBlockCount: targetBlocks.length,
     selectedBy: hostBlocks.length ? "server_name" : "production_upstream",
     directives,
@@ -66,7 +68,18 @@ function nginxConfig() {
   for (const [command, args] of [["sudo", ["-n", "nginx", "-T"]], ["nginx", ["-T"]]]) {
     const result = spawnSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
     const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
-    if (result.status === 0 && output.trim()) return output;
+    if (result.status === 0 && output.trim()) return { output, source: command === "sudo" ? "host-sudo" : "host" };
+  }
+
+  const running = lines(docker(["ps", "--format", "{{json .}}"])).map((line) => JSON.parse(line));
+  const candidates = running.filter((container) => /nginx|proxy|swag/i.test(`${container.Names} ${container.Image}`));
+  for (const candidate of candidates) {
+    const result = spawnSync("docker", ["exec", candidate.Names, "nginx", "-T"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+    if (result.status === 0 && output.trim()) return { output, source: `container:${candidate.Names}` };
   }
   throw new Error("Unable to read the active Nginx configuration");
 }
