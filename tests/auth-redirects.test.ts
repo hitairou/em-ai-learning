@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { getLoginDestination, safeInternalRedirect } from "../src/lib/auth/redirects";
-import { sessionCookieOptions } from "../src/lib/auth/session-cookie";
+import {
+  HOST_PREFIX_SESSION_COOKIE,
+  LEGACY_SESSION_COOKIE,
+  expiredSessionCookieOptions,
+  sessionCookieName,
+  sessionCookieNames,
+  sessionCookieOptions,
+} from "../src/lib/auth/session-cookie";
 
 test("admin login destination bypasses learner onboarding state", () => {
   assert.equal(getLoginDestination({
@@ -45,6 +52,10 @@ test("redirect paths stay same-origin", () => {
 });
 
 test("session cookie attributes remain locked down", () => {
+  assert.equal(sessionCookieName("production"), HOST_PREFIX_SESSION_COOKIE);
+  assert.equal(sessionCookieName("development"), LEGACY_SESSION_COOKIE);
+  assert.deepEqual(sessionCookieNames("production"), [HOST_PREFIX_SESSION_COOKIE, LEGACY_SESSION_COOKIE]);
+  assert.deepEqual(sessionCookieNames("development"), [LEGACY_SESSION_COOKIE]);
   assert.deepEqual(sessionCookieOptions("production"), {
     httpOnly: true,
     secure: true,
@@ -52,6 +63,8 @@ test("session cookie attributes remain locked down", () => {
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
   });
+  assert.equal("domain" in sessionCookieOptions("production"), false);
 
   assert.equal(sessionCookieOptions("development").secure, false);
+  assert.equal(expiredSessionCookieOptions("production").maxAge, 0);
 });

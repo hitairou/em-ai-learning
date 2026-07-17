@@ -1,54 +1,43 @@
 import "server-only";
-import { cookies } from "next/headers";
-import { SignJWT, jwtVerify } from "jose";
-import { SESSION_COOKIE, SESSION_TTL_SECONDS, sessionCookieOptions } from "@/lib/auth/session-cookie";
+import { cookies, headers } from "next/headers";
+import {
+  expiredSessionCookieOptions,
+  LEGACY_SESSION_COOKIE,
+  sessionCookieCandidatesFromHeader,
+  sessionCookieName,
+  sessionCookieNames,
+  sessionCookieOptions,
+} from "@/lib/auth/session-cookie";
+import {
+  signSession,
+  verifySessionCandidates,
+  verifySessionToken,
+  type SessionPayload,
+} from "@/lib/auth/session-core";
 
-export { SESSION_COOKIE };
-
-export interface SessionPayload {
-  userId: string;
-  role: string;
-}
-
-function secretKey() {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret || secret.length < 32) {
-    throw new Error("AUTH_SECRET must contain at least 32 characters");
-  }
-  return new TextEncoder().encode(secret);
-}
-
-export async function signSession(payload: SessionPayload) {
-  return new SignJWT({ userId: payload.userId, role: payload.role })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime(`${SESSION_TTL_SECONDS}s`)
-    .sign(secretKey());
-}
-
-export async function verifySession(token?: string | null): Promise<SessionPayload | null> {
-  if (!token) return null;
-  try {
-    const { payload } = await jwtVerify(token, secretKey(), { algorithms: ["HS256"] });
-    if (typeof payload.userId !== "string" || typeof payload.role !== "string") return null;
-    return { userId: payload.userId, role: payload.role };
-  } catch {
-    return null;
-  }
-}
+export { LEGACY_SESSION_COOKIE, signSession, verifySessionToken as verifySession };
+export type { SessionPayload };
 
 export async function createSession(payload: SessionPayload) {
   const token = await signSession(payload);
   const store = await cookies();
-  store.set(SESSION_COOKIE, token, sessionCookieOptions());
+  const primaryName = sessionCookieName();
+  store.set(primaryName, token, sessionCookieOptions());
+  if (primaryName !== LEGACY_SESSION_COOKIE) {
+    store.set(LEGACY_SESSION_COOKIE, "", expiredSessionCookieOptions());
+  }
 }
 
 export async function clearSession() {
   const store = await cookies();
-  store.delete(SESSION_COOKIE);
+  for (const name of sessionCookieNames()) {
+    store.set(name, "", expiredSessionCookieOptions());
+  }
 }
 
 export async function readSession() {
-  const store = await cookies();
-  return verifySession(store.get(SESSION_COOKIE)?.value);
+  const requestHeaders = await headers();
+  const candidates = sessionCookieCandidatesFromHeader(requestHeaders.get("cookie"));
+  const result = await verifySessionCandidates(candidates);
+  return result.payload;
 }
