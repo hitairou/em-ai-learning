@@ -16,7 +16,11 @@ export async function GET(request: Request) {
   }
 
   await clearSession();
-  const response = NextResponse.redirect(new URL("/", request.url));
+  const hostHeader = request.headers.get("x-forwarded-host") || request.headers.get("host");
+  const protoHeader = request.headers.get("x-forwarded-proto");
+  const origin = hostHeader ? `${protoHeader || "https"}://${hostHeader}` : new URL(request.url).origin;
+
+  const response = NextResponse.redirect(new URL("/login", origin));
   response.headers.set("Cache-Control", "private, no-store");
   return response;
 }
