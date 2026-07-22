@@ -1,5 +1,6 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
+import { normalizeCourse } from "@/lib/courses";
 import { countMistake } from "@/lib/json";
 
 export async function recordSkillAttempt(
@@ -14,11 +15,12 @@ export async function recordSkillAttempt(
     mistakeType: string;
   },
 ) {
+  const course = normalizeCourse(input.course) ?? input.course;
   const existing = await tx.userSkillProfile.findUnique({
     where: {
       userId_course_topic: {
         userId: input.userId,
-        course: input.course,
+        course,
         topic: input.topic,
       },
     },
@@ -39,7 +41,7 @@ export async function recordSkillAttempt(
     where: {
       userId_course_topic: {
         userId: input.userId,
-        course: input.course,
+        course,
         topic: input.topic,
       },
     },
@@ -55,7 +57,7 @@ export async function recordSkillAttempt(
     },
     create: {
       userId: input.userId,
-      course: input.course,
+      course,
       topic: input.topic,
       score,
       attempts,

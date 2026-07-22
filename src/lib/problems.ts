@@ -1,5 +1,6 @@
 import type { Problem } from "@prisma/client";
 import type { AdminProblemView, Choice, Course, ProblemView } from "@/types/learning";
+import { normalizeCourse } from "@/lib/courses";
 import { parseJson } from "@/lib/json";
 
 export function toProblemView(problem: Problem): ProblemView;
@@ -9,7 +10,7 @@ export function toProblemView(problem: Problem, includeAnswer = false): ProblemV
   const learnerView: ProblemView = {
     id: problem.id,
     appQuestionId: problem.appQuestionId,
-    course: problem.course as Course,
+    course: normalizeCourse(problem.course) ?? (problem.course as Course),
     unit: problem.unit,
     topic: problem.topic,
     subtopic: problem.subtopic,

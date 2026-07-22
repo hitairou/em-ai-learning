@@ -15,9 +15,16 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const difficulty = Number(params.get("difficulty"));
   const active = params.get("isActive");
+  const q = params.get("q")?.trim();
   const page = Math.max(1, Number(params.get("page")) || 1);
   const where: Prisma.ProblemWhereInput = {
-    appQuestionId: params.get("q") ? { contains: params.get("q")! } : { not: null },
+    ...(q ? {
+      OR: [
+        { appQuestionId: { contains: q } },
+        { title: { contains: q } },
+        { questionText: { contains: q } },
+      ],
+    } : {}),
     ...(params.get("course") ? { course: params.get("course")! } : {}),
     ...(params.get("unit") ? { unit: params.get("unit")! } : {}),
     ...(params.get("topic") ? { topic: params.get("topic")! } : {}),
@@ -31,9 +38,9 @@ export async function GET(request: NextRequest) {
   const [problems, total, units, topics, subtopics] = await Promise.all([
     db.problem.findMany({ where, orderBy: [{ appQuestionId: "asc" }, { createdAt: "asc" }], skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
     db.problem.count({ where }),
-    db.problem.findMany({ where: { appQuestionId: { not: null } }, distinct: ["unit"], select: { unit: true }, orderBy: { unit: "asc" } }),
-    db.problem.findMany({ where: { appQuestionId: { not: null } }, distinct: ["topic"], select: { topic: true }, orderBy: { topic: "asc" } }),
-    db.problem.findMany({ where: { appQuestionId: { not: null }, subtopic: { not: null } }, distinct: ["subtopic"], select: { subtopic: true }, orderBy: { subtopic: "asc" } }),
+    db.problem.findMany({ distinct: ["unit"], select: { unit: true }, orderBy: { unit: "asc" } }),
+    db.problem.findMany({ distinct: ["topic"], select: { topic: true }, orderBy: { topic: "asc" } }),
+    db.problem.findMany({ where: { subtopic: { not: null } }, distinct: ["subtopic"], select: { subtopic: true }, orderBy: { subtopic: "asc" } }),
   ]);
   return NextResponse.json({
     problems: problems.map((problem) => toProblemView(problem, true)),

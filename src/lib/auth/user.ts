@@ -2,11 +2,12 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { readSession } from "@/lib/auth/session";
+import { normalizeCourse } from "@/lib/courses";
 
 export async function getCurrentUser() {
   const session = await readSession();
   if (!session) return null;
-  return db.user.findUnique({
+  const user = await db.user.findUnique({
     where: { id: session.userId },
     select: {
       id: true,
@@ -20,6 +21,12 @@ export async function getCurrentUser() {
       createdAt: true,
     },
   });
+  if (!user) return null;
+  const selectedCourse = normalizeCourse(user.selectedCourse);
+  if (user.selectedCourse && selectedCourse && selectedCourse !== user.selectedCourse) {
+    await db.user.update({ where: { id: user.id }, data: { selectedCourse } });
+  }
+  return { ...user, selectedCourse };
 }
 
 export async function requireUser() {

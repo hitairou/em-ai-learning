@@ -33,6 +33,7 @@ async function snapshot() {
   const hasAppQuestionId = problemColumns.has("appQuestionId");
   const hasQuestionGateColumns = [
     "appQuestionId",
+    "sourceType",
     "isActive",
     "humanReviewStatus",
     "verificationStatus",
@@ -41,21 +42,32 @@ async function snapshot() {
   const canonicalQuestionCount = hasAppQuestionId
     ? await prisma.problem.count({ where: { appQuestionId: { not: null } } })
     : 0;
-  const publishedQuestionCount = hasQuestionGateColumns
+  const canonicalPublishedQuestionCount = hasQuestionGateColumns
     ? await prisma.problem.count({
       where: {
         appQuestionId: { not: null },
         isActive: true,
         humanReviewStatus: "accepted",
         verificationStatus: "verified",
+        sourceType: { not: "diagnostic" },
+      },
+    })
+    : 0;
+  const publishedQuestionCount = hasQuestionGateColumns
+    ? await prisma.problem.count({
+      where: {
+        isActive: true,
+        humanReviewStatus: "accepted",
+        verificationStatus: "verified",
+        sourceType: { not: "diagnostic" },
       },
     })
     : 0;
   const invalidPublishedQuestionCount = hasQuestionGateColumns
     ? await prisma.problem.count({
       where: {
-        appQuestionId: { not: null },
         isActive: true,
+        sourceType: { not: "diagnostic" },
         OR: [
           { humanReviewStatus: { not: "accepted" } },
           { verificationStatus: { not: "verified" } },
@@ -66,6 +78,17 @@ async function snapshot() {
   const legacyProblemCount = hasAppQuestionId
     ? await prisma.problem.count({ where: { appQuestionId: null } })
     : totalProblemCount;
+  const manualPublishedQuestionCount = hasQuestionGateColumns
+    ? await prisma.problem.count({
+      where: {
+        appQuestionId: null,
+        isActive: true,
+        humanReviewStatus: "accepted",
+        verificationStatus: "verified",
+        sourceType: { not: "diagnostic" },
+      },
+    })
+    : 0;
 
   const [
     userCount,
@@ -94,10 +117,12 @@ async function snapshot() {
     userCount,
     adminCount,
     canonicalQuestionCount,
+    canonicalPublishedQuestionCount,
     publishedQuestionCount,
-    unpublishedQuestionCount: canonicalQuestionCount - publishedQuestionCount,
+    unpublishedQuestionCount: canonicalQuestionCount - canonicalPublishedQuestionCount,
     invalidPublishedQuestionCount,
     legacyProblemCount,
+    manualPublishedQuestionCount,
     practiceAttemptCount,
     diagnosticAttemptCount,
     diagnosticAnswerCount,

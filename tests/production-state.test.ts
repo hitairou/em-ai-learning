@@ -57,6 +57,7 @@ test("production state can snapshot the legacy pre-migration Problem schema", as
     assert.match(stdout, /publishedQuestionCount=0/);
     assert.match(stdout, /invalidPublishedQuestionCount=0/);
     assert.match(stdout, /legacyProblemCount=1/);
+    assert.match(stdout, /manualPublishedQuestionCount=0/);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

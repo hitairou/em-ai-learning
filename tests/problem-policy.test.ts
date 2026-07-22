@@ -8,6 +8,7 @@ test("publication requires accepted, verified, and active", () => {
   assert.equal(isPublishedProblem({ humanReviewStatus: "unreviewed", verificationStatus: "verified", isActive: true }), false);
   assert.equal(isPublishedProblem({ humanReviewStatus: "accepted", verificationStatus: "verified", isActive: false }), false);
   assert.equal(isPublishedProblem({ humanReviewStatus: "accepted", verificationStatus: "verified", isActive: true }), true);
+  assert.equal(isPublishedProblem({ humanReviewStatus: "accepted", verificationStatus: "verified", isActive: true, sourceType: "diagnostic" }), false);
 });
 
 test("server-side review state enforcement deactivates invalid combinations", () => {

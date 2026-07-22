@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CircuitBoard, Magnet } from "lucide-react";
+import { normalizeCourse } from "@/lib/courses";
 import { PURPOSE_LABELS } from "@/lib/constants";
 import type { Course, LearningPurpose } from "@/types/learning";
 
 export default function CourseSelector({ initialCourse, initialPurpose }: { initialCourse?: string | null; initialPurpose?: string | null }) {
   const router = useRouter();
-  const [course, setCourse] = useState<Course>((initialCourse as Course) || "em1");
+  const [course, setCourse] = useState<Course>(normalizeCourse(initialCourse) ?? "em1");
   const [purpose, setPurpose] = useState<LearningPurpose>((initialPurpose as LearningPurpose) || "foundation");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
