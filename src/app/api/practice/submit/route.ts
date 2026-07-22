@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiUser } from "@/lib/auth/api";
+import { courseAliases } from "@/lib/courses";
 import { db } from "@/lib/db";
 import { gradeAnswer } from "@/lib/ai/gradeAnswer";
 import { findSimilarProblem } from "@/lib/problem-bank";
@@ -16,7 +17,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: firstZodError(parsed.error) }, { status: 400 });
   }
   const problem = await db.problem.findFirst({
-    where: { id: parsed.data.problemId, course: auth.user.selectedCourse ?? undefined, ...publishedProblemWhere },
+    where: {
+      id: parsed.data.problemId,
+      ...(auth.user.selectedCourse ? { course: { in: courseAliases(auth.user.selectedCourse) } } : {}),
+      ...publishedProblemWhere,
+    },
   });
   if (!problem) return NextResponse.json({ error: "問題を確認できませんでした" }, { status: 404 });
 

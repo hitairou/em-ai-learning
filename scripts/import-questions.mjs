@@ -196,11 +196,21 @@ async function verifyInitial(rows) {
 
 async function verifyProduction(rows) {
   const { imported, summary } = await baseVerification(rows);
-  const [legacyProblemCount, legacyNormalCandidateCount] = await Promise.all([
+  const [legacyProblemCount, manualPublishedCount, legacyDiagnosticCandidateCount] = await Promise.all([
     prisma.problem.count({ where: { appQuestionId: null } }),
     prisma.problem.count({
       where: {
         appQuestionId: null,
+        sourceType: { not: "diagnostic" },
+        isActive: true,
+        humanReviewStatus: "accepted",
+        verificationStatus: "verified",
+      },
+    }),
+    prisma.problem.count({
+      where: {
+        appQuestionId: null,
+        sourceType: "diagnostic",
         isActive: true,
         humanReviewStatus: "accepted",
         verificationStatus: "verified",
@@ -230,10 +240,11 @@ async function verifyProduction(rows) {
     invalidPublishedCount,
     disallowedStatusActiveCount,
     legacyProblemCount,
-    legacyNormalCandidateCount,
+    manualPublishedCount,
+    legacyDiagnosticCandidateCount,
   };
   assertBase(result);
-  if (invalidPublishedCount || disallowedStatusActiveCount || legacyNormalCandidateCount) {
+  if (invalidPublishedCount || disallowedStatusActiveCount || legacyDiagnosticCandidateCount) {
     throw new Error(`Production question state verification failed: ${JSON.stringify(result)}`);
   }
   return result;

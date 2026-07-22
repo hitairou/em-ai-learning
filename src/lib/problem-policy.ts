@@ -8,18 +8,20 @@ export const publishedProblemWhere = {
   isActive: true,
   humanReviewStatus: "accepted",
   verificationStatus: "verified",
-  appQuestionId: { not: null },
+  sourceType: { not: "diagnostic" },
 } as const;
 
 export function isPublishedProblem(problem: {
   isActive: boolean;
   humanReviewStatus: string;
   verificationStatus: string;
+  sourceType?: string;
 }) {
   return (
     problem.isActive &&
     problem.humanReviewStatus === "accepted" &&
-    problem.verificationStatus === "verified"
+    problem.verificationStatus === "verified" &&
+    problem.sourceType !== "diagnostic"
   );
 }
 
