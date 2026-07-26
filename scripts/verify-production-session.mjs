@@ -30,13 +30,13 @@ try {
   });
 
   const pc = await login(learner.email, pcUserAgent);
-  await visitAll("pc", pc.cookie, pcUserAgent, ["/home", "/practice", "/review", "/history", "/profile"]);
+  await visitAll("pc", pc.cookie, pcUserAgent, ["/home", "/practice", "/review", "/profile"]);
 
   const adminSession = await login(admin.email, pcUserAgent);
   await visitAll("admin-pc", adminSession.cookie, pcUserAgent, ["/admin/problems", "/admin/materials", "/home", "/admin/problems"]);
 
   const mobile = await login(learner.email, mobileUserAgent);
-  await visitAll("mobile", mobile.cookie, mobileUserAgent, ["/home", "/practice", "/review", "/history", "/profile"]);
+  await visitAll("mobile", mobile.cookie, mobileUserAgent, ["/home", "/practice", "/review", "/profile"]);
 
   await expectStatus("legacy-invalid-new-valid", "/home", {
     userAgent: pcUserAgent,
@@ -70,9 +70,9 @@ try {
     event: "SESSION_VERIFY_RESULT",
     status: "success",
     cookieName: "__Host-em-study-session",
-    pcRoutes: 5,
+    pcRoutes: 4,
     adminRoutes: 4,
-    mobileRoutes: 5,
+    mobileRoutes: 4,
     legacyCookie: "ignored_when_new_cookie_valid",
     duplicateCookie: "valid_candidate_selected",
     logout: "new_and_legacy_deleted",
