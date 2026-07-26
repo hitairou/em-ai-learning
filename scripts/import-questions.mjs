@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 
-const EXPECTED_COUNT = 834;
+const EXPECTED_COUNT = 932;
 const INITIAL_STATE = {
   humanReviewStatus: "unreviewed",
   verificationStatus: "draft",

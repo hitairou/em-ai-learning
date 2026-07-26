@@ -10,7 +10,6 @@ const protectedPrefixes = [
   "/camera",
   "/practice",
   "/review",
-  "/history",
   "/profile",
   "/admin",
   "/onboarding",

@@ -20,6 +20,19 @@ test("choice grading is deterministic", () => {
   assert.equal(gradeDeterministically(target, "a").isCorrect, false);
 });
 
+test("choice grading accepts concise answer text", () => {
+  const target = problem({
+    answerKind: "choice",
+    correctAnswer: "外向き",
+    choicesJson: JSON.stringify([
+      { id: "a", text: "内向き", misconceptionType: "concept_error" },
+      { id: "b", text: "外向き", misconceptionType: "correct" },
+    ]),
+  });
+  assert.equal(gradeDeterministically(target, "b").isCorrect, true);
+  assert.equal(gradeDeterministically(target, "a").isCorrect, false);
+});
+
 test("numeric grading applies tolerance and units", () => {
   const target = problem({ answerKind: "numeric", correctAnswer: "\\(12.0\\,\\mathrm{V}\\)", internalMetadataJson: JSON.stringify({ relativeTolerance: 0.02 }) });
   assert.equal(gradeDeterministically(target, "12.1 V").isCorrect, true);

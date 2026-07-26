@@ -87,7 +87,7 @@ test("PC Chromium keeps the admin session across protected navigation", async ({
   await login(page, adminEmail);
   await assertSignedInPage(page, "/admin/problems");
 
-  for (const route of ["/home", "/practice", "/review", "/history", "/profile", "/admin/problems"]) {
+  for (const route of ["/home", "/practice", "/review", "/profile", "/admin/problems"]) {
     await page.goto(`${baseUrl}${route}`);
     await assertSignedInPage(page, route);
     await page.reload();
@@ -98,11 +98,11 @@ test("PC Chromium keeps the admin session across protected navigation", async ({
   await page.locator('a[href="/practice"]').first().click();
   await assertSignedInPage(page, "/practice");
   await page.goto(`${baseUrl}/review`);
-  await page.goto(`${baseUrl}/history`);
+  await page.goto(`${baseUrl}/profile`);
   await page.goBack();
   await assertSignedInPage(page, "/review");
   await page.goForward();
-  await assertSignedInPage(page, "/history");
+  await assertSignedInPage(page, "/profile");
 });
 
 test("new browser contexts keep sessions after login", async ({ browser }) => {
@@ -110,7 +110,7 @@ test("new browser contexts keep sessions after login", async ({ browser }) => {
   const page = await context.newPage();
   try {
     await login(page, learnerEmail);
-    for (const route of ["/home", "/practice", "/review", "/history", "/profile"]) {
+    for (const route of ["/home", "/practice", "/review", "/profile"]) {
       await page.goto(`${baseUrl}${route}`);
       await assertSignedInPage(page, route);
     }
@@ -122,7 +122,7 @@ test("new browser contexts keep sessions after login", async ({ browser }) => {
 test("legacy invalid cookies do not break a fresh login", async ({ context, page }) => {
   await context.addCookies([{ name: "em-study-session", value: "invalid", url: baseUrl }]);
   await login(page, learnerEmail);
-  for (const route of ["/home", "/practice", "/review", "/history", "/profile"]) {
+  for (const route of ["/home", "/practice", "/review", "/profile"]) {
     await page.goto(`${baseUrl}${route}`);
     await assertSignedInPage(page, route);
   }
@@ -137,7 +137,7 @@ test("mobile viewport keeps the learner session", async ({ browser }) => {
   const page = await context.newPage();
   try {
     await login(page, learnerEmail);
-    for (const route of ["/home", "/practice", "/review", "/history", "/profile"]) {
+    for (const route of ["/home", "/practice", "/review", "/profile"]) {
       await page.goto(`${baseUrl}${route}`);
       await assertSignedInPage(page, route);
     }

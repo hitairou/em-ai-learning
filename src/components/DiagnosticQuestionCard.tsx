@@ -9,7 +9,7 @@ export default function DiagnosticQuestionCard({ problem, selected, onSelect }: 
       <div className="choiceList">
         {problem.choices.map((choice) => (
           <button key={choice.id} type="button" className={`choiceButton ${selected === choice.id ? "selected" : ""}`} onClick={() => onSelect(choice.id)}>
-            <span>{choice.id.toUpperCase()}</span>{choice.text}
+            <span className="choiceButtonId">{choice.id.toUpperCase()}</span><span className="choiceButtonText">{choice.text}</span>
           </button>
         ))}
       </div>

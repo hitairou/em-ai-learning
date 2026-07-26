@@ -15,7 +15,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang="ja" data-scroll-behavior="smooth">
       <body>
-        <AppHeader user={user ? { name: user.name, role: user.role } : null} />
+        <AppHeader user={user ? { name: user.name, role: user.role, selectedCourse: user.selectedCourse } : null} />
         <main className={user ? "appMain" : "publicMain"}>{children}</main>
         {user && <BottomNavigation />}
       </body>

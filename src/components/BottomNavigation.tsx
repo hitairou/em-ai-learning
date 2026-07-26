@@ -14,6 +14,8 @@ const items = [
 
 export default function BottomNavigation() {
   const pathname = usePathname();
+  if (pathname === "/onboarding/diagnostic") return null;
+
   return (
     <nav className="bottomNav" aria-label="学習メニュー">
       {items.map((item) => {

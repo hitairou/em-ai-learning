@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { apiUser } from "@/lib/auth/api";
 import { db } from "@/lib/db";
 import { analyzeQuestion } from "@/lib/ai/analyzeQuestion";
+import { ELECTROMAGNETISM_ONLY_MESSAGE, shouldAcceptFollowUpQuestion } from "@/lib/question-relevance";
 import { chatMessageSchema, firstZodError } from "@/lib/validation";
 import type { Course } from "@/types/learning";
 
@@ -13,6 +14,9 @@ export async function POST(request: Request, context: RouteContext<"/api/chat/[i
   if (!parsed.success) return NextResponse.json({ error: firstZodError(parsed.error) }, { status: 400 });
   const session = await db.questionSession.findFirst({ where: { id, userId: auth.user.id } });
   if (!session) return NextResponse.json({ error: "質問が見つかりません" }, { status: 404 });
+  if (!shouldAcceptFollowUpQuestion(parsed.data.content)) {
+    return NextResponse.json({ error: ELECTROMAGNETISM_ONLY_MESSAGE }, { status: 400 });
+  }
   const analysis = await analyzeQuestion({
     text: `元の問題:\n${session.extractedText}\n\n追加質問:\n${parsed.data.content}`,
     selectedCourse: session.course as Course,

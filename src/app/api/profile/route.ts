@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiUser } from "@/lib/auth/api";
 import { db } from "@/lib/db";
-import { parseJson } from "@/lib/json";
+import { getUnitSkillSummaries } from "@/lib/skill-summary";
 
 function dayKey(date: Date) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tokyo" }).format(date);
@@ -16,10 +16,9 @@ export async function GET() {
       select: { isCorrect: true, createdAt: true, mistakeType: true },
       orderBy: { createdAt: "desc" },
     }),
-    db.userSkillProfile.findMany({
-      where: { userId: auth.user.id, course: auth.user.selectedCourse ?? undefined },
-      orderBy: { score: "asc" },
-    }),
+    auth.user.selectedCourse
+      ? getUnitSkillSummaries(db, { userId: auth.user.id, course: auth.user.selectedCourse, includeZero: true })
+      : Promise.resolve([]),
   ]);
   const studiedDays = new Set(attempts.map((item) => dayKey(item.createdAt)));
   let streak = 0;
@@ -39,11 +38,11 @@ export async function GET() {
     correctRate: attempts.length ? Math.round((correct / attempts.length) * 100) : 0,
     streak,
     skills: skills.map((skill) => ({
-      topic: skill.topic,
+      topic: skill.unit,
       score: skill.score,
       attempts: skill.attempts,
-      correctRate: skill.correctRate,
-      mistakeTypes: parseJson<Record<string, number>>(skill.mistakeTypesJson, {}),
+      correctRate: null,
+      mistakeTypes: {},
     })),
     mistakeDistribution: [...mistakeDistribution.entries()].map(([type, count]) => ({ type, count })),
   });

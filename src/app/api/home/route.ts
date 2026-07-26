@@ -3,6 +3,7 @@ import { apiUser } from "@/lib/auth/api";
 import { db } from "@/lib/db";
 import { toProblemView } from "@/lib/problems";
 import { parseJson } from "@/lib/json";
+import { getCurrentDiagnosticScore } from "@/lib/diagnostic-score";
 import { findNextPracticeProblem } from "@/lib/problem-bank";
 import { publishedProblemWhere } from "@/lib/problem-policy";
 
@@ -12,17 +13,14 @@ export async function GET() {
   if (!auth.user.selectedCourse) {
     return NextResponse.json({ error: "オンボーディングが必要です" }, { status: 409 });
   }
-  const [diagnostic, skills, recentMistakes] = await Promise.all([
-    db.diagnosticAttempt.findFirst({
-      where: { userId: auth.user.id, course: auth.user.selectedCourse },
-      orderBy: { completedAt: "desc" },
-    }),
+  const [diagnosticScore, skills, recentMistakes] = await Promise.all([
+    getCurrentDiagnosticScore(db, { userId: auth.user.id, course: auth.user.selectedCourse }),
     db.userSkillProfile.findMany({
       where: { userId: auth.user.id, course: auth.user.selectedCourse },
       orderBy: { score: "asc" },
     }),
     db.practiceAttempt.findMany({
-      where: { userId: auth.user.id, isCorrect: false, problem: { is: publishedProblemWhere } },
+      where: { userId: auth.user.id, isCorrect: false, problem: { is: { ...publishedProblemWhere, course: auth.user.selectedCourse } } },
       orderBy: { createdAt: "desc" },
       take: 3,
       include: { problem: true },
@@ -32,7 +30,7 @@ export async function GET() {
   const recommendation = await findNextPracticeProblem({ userId: auth.user.id, course: auth.user.selectedCourse, mode });
   return NextResponse.json({
     course: auth.user.selectedCourse,
-    diagnosticScore: diagnostic?.score ?? null,
+    diagnosticScore,
     recommendation: recommendation ? toProblemView(recommendation) : null,
     skills: skills.map((skill) => ({
       topic: skill.topic,

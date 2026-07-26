@@ -107,9 +107,9 @@ test("proxy redirects safely when all cookie candidates are invalid", async () =
 
 test("proxy redirects missing cookies to login", async () => {
   await withProductionEnv(async () => {
-    const response = await proxy(protectedRequest("/history"));
+    const response = await proxy(protectedRequest("/review"));
     assert.equal(response.status, 307);
-    assert.equal(redirectPath(response), "/login?next=%2Fhistory");
+    assert.equal(redirectPath(response), "/login?next=%2Freview");
   });
 });
 

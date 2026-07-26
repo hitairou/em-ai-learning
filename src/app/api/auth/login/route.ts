@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { createSession } from "@/lib/auth/session";
-import { getLoginDestination } from "@/lib/auth/redirects";
 import { loginSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -15,7 +14,19 @@ export async function POST(request: Request) {
     return authJson({ error: "メールアドレスまたはパスワードが違います" }, { status: 401 });
   }
   await createSession({ userId: user.id, role: user.role });
-  const next = getLoginDestination(user);
+  const diagnostic = user.selectedCourse
+    ? await db.diagnosticAttempt.findFirst({
+      where: { userId: user.id, course: user.selectedCourse },
+      select: { id: true },
+    })
+    : null;
+  const next = user.role === "admin"
+    ? "/admin/problems"
+    : !user.selectedCourse
+      ? "/onboarding/course"
+      : !diagnostic
+        ? "/onboarding/diagnostic"
+        : "/home";
   return authJson({ user: { id: user.id, name: user.name }, next });
 }
 
