@@ -181,8 +181,7 @@ jobs:
           docker version >/dev/null
           docker volume inspect "$DATA_VOLUME" >/dev/null
           if ! docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
-            echo "Production container ${CONTAINER_NAME} does not exist on this runner." >&2
-            exit 1
+            echo "Production container ${CONTAINER_NAME} does not exist; deploy will recreate it from ${DATA_VOLUME}." >&2
           fi
 
       - name: Backup, deploy, verify, and rollback on failure

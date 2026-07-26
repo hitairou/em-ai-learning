@@ -29,13 +29,13 @@ if ! command -v docker >/dev/null || ! command -v curl >/dev/null || ! command -
   echo "ERROR: docker, curl, tar, and openssl are required." >&2
   exit 1
 fi
-if ! docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
-  echo "ERROR: production container $CONTAINER_NAME does not exist." >&2
-  exit 1
-fi
 if ! docker volume inspect "$DATA_VOLUME" >/dev/null 2>&1; then
   echo "ERROR: production volume $DATA_VOLUME does not exist." >&2
   exit 1
+fi
+HAS_EXISTING_CONTAINER=0
+if docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
+  HAS_EXISTING_CONTAINER=1
 fi
 
 mkdir -p "$BACKUP_ROOT"
@@ -117,8 +117,13 @@ OLD_CONTAINER_NAME="${CONTAINER_NAME}-before-${STAMP}"
 PREPARE_NAME="${CONTAINER_NAME}-prepare-${STAMP}"
 CANDIDATE_NAME="${CONTAINER_NAME}-candidate-${STAMP}"
 CANDIDATE_PORT="${CANDIDATE_PORT:-$((HOST_PORT + 1000))}"
-OLD_IMAGE_REFERENCE="$(docker inspect "$CONTAINER_NAME" --format '{{.Config.Image}}')"
-OLD_IMAGE_ID="$(docker inspect "$CONTAINER_NAME" --format '{{.Image}}')"
+if [ "$HAS_EXISTING_CONTAINER" -eq 1 ]; then
+  OLD_IMAGE_REFERENCE="$(docker inspect "$CONTAINER_NAME" --format '{{.Config.Image}}')"
+  OLD_IMAGE_ID="$(docker inspect "$CONTAINER_NAME" --format '{{.Image}}')"
+else
+  OLD_IMAGE_REFERENCE="none"
+  OLD_IMAGE_ID="none"
+fi
 NEW_IMAGE_DIGEST="$(docker image inspect "$NEW_IMAGE" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)"
 BACKUP_READY=0
 OLD_RENAMED=0
@@ -127,9 +132,15 @@ mkdir -p "$BACKUP_DIR"
 printf '%s\n' "$AUTH_SECRET_SOURCE" > "${BACKUP_DIR}/auth-secret-source.txt"
 printf '%s\n' "$OPENAI_API_KEY_SOURCE" > "${BACKUP_DIR}/openai-api-key-source.txt"
 printf '%s\n' "$GHCR_AUTH_SOURCE" > "${BACKUP_DIR}/ghcr-auth-source.txt"
-docker inspect "$CONTAINER_NAME" --format '{{json .HostConfig.RestartPolicy}}' > "${BACKUP_DIR}/restart-policy.json"
-docker inspect "$CONTAINER_NAME" --format '{{json .HostConfig.PortBindings}}' > "${BACKUP_DIR}/port-bindings.json"
-docker inspect "$CONTAINER_NAME" --format '{{json .Mounts}}' > "${BACKUP_DIR}/mounts.json"
+if [ "$HAS_EXISTING_CONTAINER" -eq 1 ]; then
+  docker inspect "$CONTAINER_NAME" --format '{{json .HostConfig.RestartPolicy}}' > "${BACKUP_DIR}/restart-policy.json"
+  docker inspect "$CONTAINER_NAME" --format '{{json .HostConfig.PortBindings}}' > "${BACKUP_DIR}/port-bindings.json"
+  docker inspect "$CONTAINER_NAME" --format '{{json .Mounts}}' > "${BACKUP_DIR}/mounts.json"
+else
+  printf '%s\n' 'null' > "${BACKUP_DIR}/restart-policy.json"
+  printf '%s\n' 'null' > "${BACKUP_DIR}/port-bindings.json"
+  printf '%s\n' '[]' > "${BACKUP_DIR}/mounts.json"
+fi
 docker volume inspect "$DATA_VOLUME" > "${BACKUP_DIR}/volume-inspect.json"
 printf '%s\n' "$OLD_IMAGE_REFERENCE" > "${BACKUP_DIR}/old-image-reference.txt"
 printf '%s\n' "$OLD_IMAGE_ID" > "${BACKUP_DIR}/old-image-id.txt"
@@ -205,9 +216,11 @@ check_html_assets() {
   fi
 }
 
-docker stop "$CONTAINER_NAME" >/dev/null
-docker rename "$CONTAINER_NAME" "$OLD_CONTAINER_NAME"
-OLD_RENAMED=1
+if [ "$HAS_EXISTING_CONTAINER" -eq 1 ]; then
+  docker stop "$CONTAINER_NAME" >/dev/null
+  docker rename "$CONTAINER_NAME" "$OLD_CONTAINER_NAME"
+  OLD_RENAMED=1
+fi
 
 docker run --rm --user 0:0 \
   -v "${DATA_VOLUME}:/data:ro" \
@@ -224,7 +237,12 @@ grep -qx './uploads/' "${BACKUP_DIR}/archive-contents.txt"
 run_state > "${BACKUP_DIR}/before-state.json"
 BEFORE_STATE_SUMMARY="$(run_state --summary)"
 BEFORE_ADMIN_COUNT="$(run_state --field adminCount)"
-echo "PRECHECK_RESULT container=${CONTAINER_NAME} running_before_stop=true volume=${DATA_VOLUME} old_image=${OLD_IMAGE_REFERENCE} self_hosted_runner=${RUNNER_NAME:-unknown} auth_secret_in_container=${container_auth_present} openai_api_key_in_container=${container_openai_present} ${BEFORE_STATE_SUMMARY}"
+if [ "$HAS_EXISTING_CONTAINER" -eq 1 ]; then
+  RUNNING_BEFORE_STOP="true"
+else
+  RUNNING_BEFORE_STOP="false"
+fi
+echo "PRECHECK_RESULT container=${CONTAINER_NAME} running_before_stop=${RUNNING_BEFORE_STOP} volume=${DATA_VOLUME} old_image=${OLD_IMAGE_REFERENCE} self_hosted_runner=${RUNNER_NAME:-unknown} auth_secret_in_container=${container_auth_present} openai_api_key_in_container=${container_openai_present} ${BEFORE_STATE_SUMMARY}"
 
 ADMIN_BOOTSTRAP_SOURCE="skipped-existing-admin"
 ADMIN_BOOTSTRAP_FILE="none"
@@ -361,8 +379,10 @@ fi
 
 BACKUP_SIZE="$(stat -c '%s' "$ARCHIVE_PATH")"
 AFTER_STATE_SUMMARY="$(docker exec "$CONTAINER_NAME" node scripts/production-state.mjs --summary)"
-docker rm "$OLD_CONTAINER_NAME" >/dev/null
-OLD_RENAMED=0
+if [ "$OLD_RENAMED" -eq 1 ]; then
+  docker rm "$OLD_CONTAINER_NAME" >/dev/null
+  OLD_RENAMED=0
+fi
 trap - ERR
 docker logout ghcr.io >/dev/null 2>&1 || true
 rm -f "/tmp/em-ai-learning-css-${STAMP}.txt" >/dev/null 2>&1 || true
