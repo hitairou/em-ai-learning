@@ -80,3 +80,12 @@ test("production deploy probes local containers with canonical forwarded headers
   assert.match(script, /curl_app 5 "http:\/\/127\.0\.0\.1:\$\{CANDIDATE_PORT\}"/);
   assert.match(script, /PRODUCTION_ROOT_HTML="\$\(curl_app 10 "http:\/\/127\.0\.0\.1:\$\{HOST_PORT\}"\)"/);
 });
+
+test("production deploy raises nginx upload limit for camera and PDF questions", async () => {
+  const script = await text("scripts/deploy-production.sh");
+
+  assert.match(script, /NGINX_UPLOAD_LIMIT="\$\{NGINX_UPLOAD_LIMIT:-12m\}"/);
+  assert.match(script, /client_max_body_size %s/);
+  assert.match(script, /sudo nginx -t/);
+  assert.match(script, /NGINX_UPLOAD_LIMIT_RESULT status=configured/);
+});
