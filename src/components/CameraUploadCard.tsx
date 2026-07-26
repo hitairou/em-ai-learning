@@ -4,6 +4,9 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, FileText, ImagePlus, Send } from "lucide-react";
 
+const DIRECT_UPLOAD_LIMIT_BYTES = 850 * 1024;
+const MAX_IMAGE_SIDE = 1600;
+
 export default function CameraUploadCard() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -17,18 +20,30 @@ export default function CameraUploadCard() {
     if (!file && !text.trim()) return;
     setSubmitting(true);
     setError("");
-    const form = new FormData();
-    if (file) form.set("file", file);
-    form.set("text", text);
-    const response = await fetch("/api/questions/upload", { method: "POST", body: form });
-    const data = await response.json();
-    if (!response.ok) {
-      setError(data.error ?? "質問を送信できませんでした");
+    try {
+      const uploadFile = file ? await prepareUploadFile(file) : null;
+      const form = new FormData();
+      if (uploadFile) form.set("file", uploadFile);
+      form.set("text", text);
+      const response = await fetch("/api/questions/upload", { method: "POST", body: form });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        setError(data?.error ?? uploadErrorMessage(response.status));
+        setSubmitting(false);
+        return;
+      }
+      if (!data?.id) {
+        setError("質問を送信できませんでした");
+        setSubmitting(false);
+        return;
+      }
+      router.push(`/chat/${data.id}`);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "質問を送信できませんでした");
       setSubmitting(false);
       return;
     }
-    router.push(`/chat/${data.id}`);
-    router.refresh();
   }
 
   return (
@@ -46,4 +61,64 @@ export default function CameraUploadCard() {
       <p className="privacyNote">画像・PDFはあなたの質問履歴にだけ保存されます。最大10MB。</p>
     </div>
   );
+}
+
+async function prepareUploadFile(file: File) {
+  if (!file.type.startsWith("image/")) {
+    if (file.size > DIRECT_UPLOAD_LIMIT_BYTES) {
+      throw new Error("PDFは容量が大きすぎます。1MB未満のPDFにするか、問題文をテキストで入力してください。");
+    }
+    return file;
+  }
+  if (file.size <= DIRECT_UPLOAD_LIMIT_BYTES) return file;
+  const compressed = await compressImage(file);
+  if (compressed.size > DIRECT_UPLOAD_LIMIT_BYTES) {
+    throw new Error("画像を十分に圧縮できませんでした。撮影範囲を問題部分だけに絞って撮り直してください。");
+  }
+  return compressed;
+}
+
+async function compressImage(file: File) {
+  const bitmap = await createImageBitmap(file);
+  try {
+    let scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(bitmap.width, bitmap.height));
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const width = Math.max(1, Math.round(bitmap.width * scale));
+      const height = Math.max(1, Math.round(bitmap.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("画像を処理できませんでした。");
+      context.drawImage(bitmap, 0, 0, width, height);
+      for (const quality of [0.82, 0.72, 0.62]) {
+        const blob = await canvasToBlob(canvas, quality);
+        if (blob.size <= DIRECT_UPLOAD_LIMIT_BYTES || attempt === 4 && quality === 0.62) {
+          return new File([blob], replaceExtension(file.name, ".jpg"), { type: "image/jpeg" });
+        }
+      }
+      scale *= 0.8;
+    }
+  } finally {
+    bitmap.close();
+  }
+  return file;
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, quality: number) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("画像を圧縮できませんでした。"));
+    }, "image/jpeg", quality);
+  });
+}
+
+function replaceExtension(name: string, extension: string) {
+  return name.includes(".") ? name.replace(/\.[^.]+$/, extension) : `${name}${extension}`;
+}
+
+function uploadErrorMessage(status: number) {
+  if (status === 413) return "ファイルが大きすぎます。画像は問題部分だけを撮影して再送してください。";
+  return "質問を送信できませんでした";
 }

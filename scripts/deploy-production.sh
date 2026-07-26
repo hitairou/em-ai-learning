@@ -20,6 +20,8 @@ OPENAI_API_KEY="${OPENAI_API_KEY:-}"
 ADMIN_BOOTSTRAP_EMAIL="${ADMIN_BOOTSTRAP_EMAIL:-}"
 ADMIN_BOOTSTRAP_PASSWORD="${ADMIN_BOOTSTRAP_PASSWORD:-}"
 ADMIN_BOOTSTRAP_NAME="${ADMIN_BOOTSTRAP_NAME:-Administrator}"
+NGINX_UPLOAD_LIMIT="${NGINX_UPLOAD_LIMIT:-12m}"
+NGINX_UPLOAD_CONF="${NGINX_UPLOAD_CONF:-/etc/nginx/conf.d/em-ai-learning-upload-size.conf}"
 
 if [ -z "$NEW_IMAGE" ]; then
   echo "ERROR: NEW_IMAGE is required." >&2
@@ -33,6 +35,29 @@ if ! docker volume inspect "$DATA_VOLUME" >/dev/null 2>&1; then
   echo "ERROR: production volume $DATA_VOLUME does not exist." >&2
   exit 1
 fi
+
+configure_nginx_upload_limit() {
+  if ! command -v nginx >/dev/null 2>&1; then
+    echo "WARN: nginx was not found; skipping upload size configuration." >&2
+    return 0
+  fi
+  if ! command -v sudo >/dev/null 2>&1 || ! sudo -n true >/dev/null 2>&1; then
+    echo "ERROR: passwordless sudo is required to configure nginx upload size." >&2
+    return 1
+  fi
+  printf 'client_max_body_size %s;\n' "$NGINX_UPLOAD_LIMIT" \
+    | sudo tee "$NGINX_UPLOAD_CONF" >/dev/null
+  sudo nginx -t >/dev/null
+  if command -v systemctl >/dev/null 2>&1; then
+    sudo systemctl reload nginx
+  else
+    sudo nginx -s reload
+  fi
+  echo "NGINX_UPLOAD_LIMIT_RESULT status=configured limit=${NGINX_UPLOAD_LIMIT} conf=${NGINX_UPLOAD_CONF}"
+}
+
+configure_nginx_upload_limit
+
 HAS_EXISTING_CONTAINER=0
 if docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
   HAS_EXISTING_CONTAINER=1
