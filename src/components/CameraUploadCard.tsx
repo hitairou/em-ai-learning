@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera, FileText, ImagePlus, Send } from "lucide-react";
 
 const DIRECT_UPLOAD_LIMIT_BYTES = 850 * 1024;
+const CHUNK_BYTES = 700 * 1024;
 const MAX_IMAGE_SIDE = 1600;
 
 export default function CameraUploadCard() {
@@ -22,16 +23,9 @@ export default function CameraUploadCard() {
     setError("");
     try {
       const uploadFile = file ? await prepareUploadFile(file) : null;
-      const form = new FormData();
-      if (uploadFile) form.set("file", uploadFile);
-      form.set("text", text);
-      const response = await fetch("/api/questions/upload", { method: "POST", body: form });
-      const data = await response.json().catch(() => null);
-      if (!response.ok) {
-        setError(data?.error ?? uploadErrorMessage(response.status));
-        setSubmitting(false);
-        return;
-      }
+      const data = uploadFile && uploadFile.size > DIRECT_UPLOAD_LIMIT_BYTES
+        ? await uploadFileInChunks(uploadFile, text)
+        : await uploadDirectly(uploadFile, text);
       if (!data?.id) {
         setError("質問を送信できませんでした");
         setSubmitting(false);
@@ -64,18 +58,39 @@ export default function CameraUploadCard() {
 }
 
 async function prepareUploadFile(file: File) {
-  if (!file.type.startsWith("image/")) {
-    if (file.size > DIRECT_UPLOAD_LIMIT_BYTES) {
-      throw new Error("PDFは容量が大きすぎます。1MB未満のPDFにするか、問題文をテキストで入力してください。");
-    }
-    return file;
-  }
+  if (!file.type.startsWith("image/")) return file;
   if (file.size <= DIRECT_UPLOAD_LIMIT_BYTES) return file;
-  const compressed = await compressImage(file);
-  if (compressed.size > DIRECT_UPLOAD_LIMIT_BYTES) {
-    throw new Error("画像を十分に圧縮できませんでした。撮影範囲を問題部分だけに絞って撮り直してください。");
+  return compressImage(file);
+}
+
+async function uploadDirectly(file: File | null, text: string) {
+  const form = new FormData();
+  if (file) form.set("file", file);
+  form.set("text", text);
+  const response = await fetch("/api/questions/upload", { method: "POST", body: form });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.error ?? uploadErrorMessage(response.status));
+  return data;
+}
+
+async function uploadFileInChunks(file: File, text: string) {
+  const uploadId = crypto.randomUUID();
+  const total = Math.ceil(file.size / CHUNK_BYTES);
+  for (let index = 0; index < total; index += 1) {
+    const chunk = file.slice(index * CHUNK_BYTES, Math.min(file.size, (index + 1) * CHUNK_BYTES));
+    const form = new FormData();
+    form.set("uploadId", uploadId);
+    form.set("fileName", file.name);
+    form.set("text", text);
+    form.set("index", String(index));
+    form.set("total", String(total));
+    form.set("chunk", new File([chunk], `${file.name}.part${index}`, { type: "application/octet-stream" }));
+    const response = await fetch("/api/questions/upload/chunk", { method: "POST", body: form });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(data?.error ?? uploadErrorMessage(response.status));
+    if (data?.id) return data;
   }
-  return compressed;
+  throw new Error("分割アップロードを完了できませんでした。");
 }
 
 async function compressImage(file: File) {

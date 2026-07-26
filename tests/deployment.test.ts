@@ -87,5 +87,6 @@ test("production deploy raises nginx upload limit for camera and PDF questions",
   assert.match(script, /NGINX_UPLOAD_LIMIT="\$\{NGINX_UPLOAD_LIMIT:-12m\}"/);
   assert.match(script, /client_max_body_size %s/);
   assert.match(script, /sudo nginx -t/);
+  assert.match(script, /app-level chunked uploads will handle large files/);
   assert.match(script, /NGINX_UPLOAD_LIMIT_RESULT status=configured/);
 });

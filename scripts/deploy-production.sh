@@ -42,8 +42,8 @@ configure_nginx_upload_limit() {
     return 0
   fi
   if ! command -v sudo >/dev/null 2>&1 || ! sudo -n true >/dev/null 2>&1; then
-    echo "ERROR: passwordless sudo is required to configure nginx upload size." >&2
-    return 1
+    echo "WARN: passwordless sudo is not available; app-level chunked uploads will handle large files." >&2
+    return 0
   fi
   printf 'client_max_body_size %s;\n' "$NGINX_UPLOAD_LIMIT" \
     | sudo tee "$NGINX_UPLOAD_CONF" >/dev/null
