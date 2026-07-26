@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiUser } from "@/lib/auth/api";
-import { findNextPracticeProblem } from "@/lib/problem-bank";
+import { findPracticeRecommendations, findPracticeUnitOptions, type PracticeSort } from "@/lib/problem-bank";
 import { toProblemView } from "@/lib/problems";
 import type { PracticeMode } from "@/types/learning";
 
 const modes = new Set<PracticeMode>(["foundation", "standard", "exam"]);
+const sorts = new Set<PracticeSort>(["achievement", "attempts", "stale"]);
 
 export async function GET(request: NextRequest) {
   const auth = await apiUser();
@@ -14,13 +15,30 @@ export async function GET(request: NextRequest) {
   }
   const requestedMode = request.nextUrl.searchParams.get("mode") as PracticeMode;
   const mode = modes.has(requestedMode) ? requestedMode : "foundation";
-  const problem = await findNextPracticeProblem({
-    userId: auth.user.id,
-    course: auth.user.selectedCourse,
-    mode,
-  });
-  if (!problem) {
-    return NextResponse.json({ error: "公開済みの演習問題がありません" }, { status: 404 });
+  const requestedSort = request.nextUrl.searchParams.get("sort") as PracticeSort;
+  const sort = sorts.has(requestedSort) ? requestedSort : "achievement";
+  const units = request.nextUrl.searchParams.getAll("unit").filter(Boolean);
+  const [recommendations, unitOptions] = await Promise.all([
+    findPracticeRecommendations({
+      userId: auth.user.id,
+      course: auth.user.selectedCourse,
+      mode,
+      sort,
+      units,
+    }),
+    findPracticeUnitOptions({ course: auth.user.selectedCourse, mode }),
+  ]);
+  if (!recommendations.length) {
+    return NextResponse.json({ problems: [], units: unitOptions, source: "database" });
   }
-  return NextResponse.json({ problem: toProblemView(problem), source: "database" });
+  return NextResponse.json({
+    problems: recommendations.map((item) => ({
+      ...toProblemView(item.problem),
+      topicScore: item.topicScore,
+      attemptCount: item.attemptCount,
+      lastAttemptAt: item.lastAttemptAt?.toISOString() ?? null,
+    })),
+    units: unitOptions,
+    source: "database",
+  });
 }

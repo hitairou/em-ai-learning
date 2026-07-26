@@ -3,6 +3,7 @@ import { apiUser } from "@/lib/auth/api";
 import { db } from "@/lib/db";
 import { analyzeQuestion } from "@/lib/ai/analyzeQuestion";
 import { extractPdfText, saveUpload } from "@/lib/uploads";
+import { ELECTROMAGNETISM_ONLY_MESSAGE, shouldAcceptInitialQuestion } from "@/lib/question-relevance";
 import type { Course, QuestionInputType } from "@/types/learning";
 
 export async function POST(request: Request) {
@@ -36,6 +37,10 @@ export async function POST(request: Request) {
         imagePath = saved.target;
         extractedText = text || `アップロード画像: ${file.name}`;
       }
+    }
+    const hasImageOnlyInput = inputType === "image" && !text;
+    if (!hasImageOnlyInput && !shouldAcceptInitialQuestion(extractedText)) {
+      return NextResponse.json({ error: ELECTROMAGNETISM_ONLY_MESSAGE }, { status: 400 });
     }
     const weakSkills = await db.userSkillProfile.findMany({
       where: { userId: auth.user.id, course: auth.user.selectedCourse },

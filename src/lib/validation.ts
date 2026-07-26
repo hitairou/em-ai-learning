@@ -22,6 +22,10 @@ export const courseSchema = z.object({
   learningPurpose: z.enum(LEARNING_PURPOSES),
 });
 
+export const courseSwitchSchema = z.object({
+  course: z.enum(COURSES),
+});
+
 export const diagnosticSubmitSchema = z.object({
   startedAt: z.string().datetime(),
   answers: z

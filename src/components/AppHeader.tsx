@@ -1,22 +1,39 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { LogOut, ShieldCheck } from "lucide-react";
+import HeaderCourseSwitcher from "@/components/HeaderCourseSwitcher";
+import type { Course } from "@/types/learning";
 
 interface HeaderUser {
   name: string;
   role: string;
+  selectedCourse: string | null;
 }
 
 export default function AppHeader({ user }: { user: HeaderUser | null }) {
+  const pathname = usePathname();
+  if (pathname === "/onboarding/diagnostic") return null;
+
   return (
     <header className="siteHeader">
       <div className="headerInner">
-        <Link className="brand" href={user ? "/home" : "/"} prefetch={user ? false : undefined}>
-          <span className="brandMark">E</span>
-          <span>
-            EM PASS
-            <small>徳島大学 電磁気学習室</small>
-          </span>
-        </Link>
+        {user?.selectedCourse ? (
+          <div className="headerIdentity courseTitleIdentity">
+            <HeaderCourseSwitcher current={user.selectedCourse as Course} />
+          </div>
+        ) : (
+          <div className="headerIdentity">
+            <Link className="brand" href={user ? "/home" : "/"} prefetch={user ? false : undefined}>
+              <span className="brandMark">E</span>
+              <span>
+                EM PASS
+                <small>徳島大学 電磁気学習室</small>
+              </span>
+            </Link>
+          </div>
+        )}
         {user ? (
           <div className="desktopHeaderActions">
             <nav className="desktopNav" aria-label="メインナビゲーション">

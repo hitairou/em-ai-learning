@@ -3,6 +3,7 @@ import { z } from "zod";
 import { apiUser } from "@/lib/auth/api";
 import { db } from "@/lib/db";
 import { analyzeQuestion } from "@/lib/ai/analyzeQuestion";
+import { ELECTROMAGNETISM_ONLY_MESSAGE, shouldAcceptInitialQuestion } from "@/lib/question-relevance";
 import type { Course } from "@/types/learning";
 
 const schema = z.object({ sessionId: z.string().min(1) });
@@ -16,6 +17,9 @@ export async function POST(request: Request) {
     where: { id: parsed.data.sessionId, userId: auth.user.id },
   });
   if (!session) return NextResponse.json({ error: "質問が見つかりません" }, { status: 404 });
+  if (session.inputType !== "image" && !shouldAcceptInitialQuestion(session.extractedText)) {
+    return NextResponse.json({ error: ELECTROMAGNETISM_ONLY_MESSAGE }, { status: 400 });
+  }
   const analysis = await analyzeQuestion({
     text: session.extractedText,
     selectedCourse: session.course as Course,

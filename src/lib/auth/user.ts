@@ -42,9 +42,7 @@ export async function requireSelectedCourse() {
 }
 
 export async function requireCompletedUser() {
-  const user = await requireSelectedCourse();
-  if (!user.diagnosticCompleted) redirect("/onboarding/diagnostic");
-  return user;
+  return requireSelectedCourse();
 }
 
 export async function requireAdmin() {

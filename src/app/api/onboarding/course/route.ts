@@ -10,13 +10,17 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: firstZodError(parsed.error) }, { status: 400 });
   }
+  const diagnostic = await db.diagnosticAttempt.findFirst({
+    where: { userId: auth.user.id, course: parsed.data.course },
+    select: { id: true },
+  });
   await db.user.update({
     where: { id: auth.user.id },
     data: {
       selectedCourse: parsed.data.course,
       learningPurpose: parsed.data.learningPurpose,
-      diagnosticCompleted: false,
-      onboardingCompleted: false,
+      diagnosticCompleted: Boolean(diagnostic),
+      onboardingCompleted: Boolean(diagnostic),
     },
   });
   return NextResponse.json({ ok: true });

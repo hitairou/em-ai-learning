@@ -57,7 +57,7 @@ export function contradictoryDerivationGrade(problem: GradeableProblem, userAnsw
   };
 }
 
-type ChoiceRecord = { id: string; misconceptionType?: MisconceptionType };
+type ChoiceRecord = { id: string; text?: string; misconceptionType?: MisconceptionType };
 
 function parseJson<T>(value: string, fallback: T): T {
   try { return JSON.parse(value) as T; } catch { return fallback; }
@@ -87,7 +87,14 @@ function result(problem: GradeableProblem, isCorrect: boolean, mistakeType: Misc
 function gradeChoice(problem: GradeableProblem, userAnswer: string) {
   const choices = parseJson<ChoiceRecord[]>(problem.choicesJson ?? "[]", []);
   const selected = choices.find((choice) => normalizeAnswer(choice.id) === normalizeAnswer(userAnswer));
-  const isCorrect = normalizeAnswer(userAnswer) === normalizeAnswer(problem.correctAnswer);
+  const normalizedCorrect = normalizeAnswer(problem.correctAnswer);
+  const correctChoice = choices.find((choice) => (
+    normalizeAnswer(choice.id) === normalizedCorrect
+    || (choice.text ? normalizeAnswer(choice.text) === normalizedCorrect : false)
+  ));
+  const isCorrect = selected
+    ? normalizeAnswer(selected.id) === normalizeAnswer(correctChoice?.id ?? problem.correctAnswer)
+    : normalizeAnswer(userAnswer) === normalizedCorrect;
   return result(problem, isCorrect, selected?.misconceptionType ?? "concept_error");
 }
 
