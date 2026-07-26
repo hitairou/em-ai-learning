@@ -155,8 +155,13 @@ async function main() {
   const baselinePath = process.argv[compareIndex + 1];
   if (!baselinePath) throw new Error("--compare requires a baseline JSON path.");
   const baseline = JSON.parse(await readFile(baselinePath, "utf8"));
+  const allowedDecreases = new Set([
+    "unpublishedQuestionCount",
+    "invalidPublishedQuestionCount",
+    "legacyDiagnosticCandidateCount",
+  ]);
   const regressions = Object.keys(baseline).filter((key) => (
-    typeof baseline[key] === "number" && current[key] < baseline[key]
+    typeof baseline[key] === "number" && current[key] < baseline[key] && !allowedDecreases.has(key)
   ));
   if (regressions.length) throw new Error(`Production data count regression: ${regressions.join(", ")}`);
   if (current.adminCount < 1) throw new Error("Production database has no administrator.");
