@@ -4,6 +4,7 @@ import { apiUser } from "@/lib/auth/api";
 import { db } from "@/lib/db";
 import { analyzeQuestion } from "@/lib/ai/analyzeQuestion";
 import { ELECTROMAGNETISM_ONLY_MESSAGE, shouldAcceptInitialQuestion } from "@/lib/question-relevance";
+import { withRelatedProblem } from "@/lib/question-related-problem";
 import type { Course } from "@/types/learning";
 
 const schema = z.object({ sessionId: z.string().min(1) });
@@ -20,11 +21,12 @@ export async function POST(request: Request) {
   if (session.inputType !== "image" && !shouldAcceptInitialQuestion(session.extractedText)) {
     return NextResponse.json({ error: ELECTROMAGNETISM_ONLY_MESSAGE }, { status: 400 });
   }
-  const analysis = await analyzeQuestion({
+  const baseAnalysis = await analyzeQuestion({
     text: session.extractedText,
     selectedCourse: session.course as Course,
     imagePath: session.inputType === "image" ? session.originalFilePath : null,
   });
+  const analysis = await withRelatedProblem({ userId: auth.user.id, analysis: baseAnalysis });
   await db.questionSession.update({
     where: { id: session.id },
     data: { detectedTopic: analysis.topic, aiSummary: JSON.stringify(analysis) },

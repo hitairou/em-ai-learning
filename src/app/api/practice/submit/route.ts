@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { apiUser } from "@/lib/auth/api";
-import { courseAliases } from "@/lib/courses";
 import { db } from "@/lib/db";
 import { gradeAnswer } from "@/lib/ai/gradeAnswer";
 import { gradeImageAnswer } from "@/lib/ai/gradeImageAnswer";
@@ -43,7 +42,6 @@ export async function POST(request: Request) {
   const problem = await db.problem.findFirst({
     where: {
       id: parsed.data.problemId,
-      ...(auth.user.selectedCourse ? { course: { in: courseAliases(auth.user.selectedCourse) } } : {}),
       ...publishedProblemWhere,
     },
   });
