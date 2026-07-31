@@ -187,7 +187,10 @@ jobs:
 
       - name: Backup, deploy, verify, and rollback on failure
         env:
-          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+          # The workflow token is granted packages:write above and also has
+          # read access to the image it just published.  Prefer it over a
+          # stale repository secret so deploy cannot hang on a rejected login.
+          GHCR_READ_TOKEN: ${{ github.token }}
           GHCR_FALLBACK_TOKEN: ${{ github.token }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
