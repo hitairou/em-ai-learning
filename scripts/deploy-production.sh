@@ -23,6 +23,8 @@ ADMIN_BOOTSTRAP_PASSWORD="${ADMIN_BOOTSTRAP_PASSWORD:-}"
 ADMIN_BOOTSTRAP_NAME="${ADMIN_BOOTSTRAP_NAME:-Administrator}"
 NGINX_UPLOAD_LIMIT="${NGINX_UPLOAD_LIMIT:-12m}"
 NGINX_UPLOAD_CONF="${NGINX_UPLOAD_CONF:-/etc/nginx/conf.d/em-ai-learning-upload-size.conf}"
+PROXY_NETWORK="${PROXY_NETWORK:-}"
+INGRESS_NETWORK="${INGRESS_NETWORK:-}"
 
 if [ -z "$NEW_IMAGE" ]; then
   echo "ERROR: NEW_IMAGE is required." >&2
@@ -395,6 +397,12 @@ docker run -d \
   -e SEED_TEST_USERS=false \
   -v "${DATA_MOUNT}:/data" \
   "$NEW_IMAGE" >/dev/null
+
+for network in "$PROXY_NETWORK" "$INGRESS_NETWORK"; do
+  if [ -n "$network" ]; then
+    docker network connect "$network" "$CONTAINER_NAME"
+  fi
+done
 
 production_ready=false
 for _ in $(seq 1 45); do
