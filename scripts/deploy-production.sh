@@ -3,6 +3,7 @@ set -Eeuo pipefail
 
 CONTAINER_NAME="${CONTAINER_NAME:-em-ai-learning}"
 DATA_VOLUME="${DATA_VOLUME:-em-ai-learning-data}"
+DATA_PATH="${DATA_PATH:-}"
 HOST_PORT="${HOST_PORT:-3010}"
 CONTAINER_PORT="${CONTAINER_PORT:-3000}"
 PUBLIC_URL="${PUBLIC_URL:-https://edesign.tairoh.com}"
@@ -31,9 +32,18 @@ if ! command -v docker >/dev/null || ! command -v curl >/dev/null || ! command -
   echo "ERROR: docker, curl, tar, and openssl are required." >&2
   exit 1
 fi
-if ! docker volume inspect "$DATA_VOLUME" >/dev/null 2>&1; then
-  echo "ERROR: production volume $DATA_VOLUME does not exist." >&2
-  exit 1
+if [ -n "$DATA_PATH" ]; then
+  if [ ! -d "$DATA_PATH" ]; then
+    echo "ERROR: production data path $DATA_PATH does not exist." >&2
+    exit 1
+  fi
+  DATA_MOUNT="$DATA_PATH"
+else
+  if ! docker volume inspect "$DATA_VOLUME" >/dev/null 2>&1; then
+    echo "ERROR: production volume $DATA_VOLUME does not exist." >&2
+    exit 1
+  fi
+  DATA_MOUNT="$DATA_VOLUME"
 fi
 
 configure_nginx_upload_limit() {
@@ -166,7 +176,11 @@ else
   printf '%s\n' 'null' > "${BACKUP_DIR}/port-bindings.json"
   printf '%s\n' '[]' > "${BACKUP_DIR}/mounts.json"
 fi
-docker volume inspect "$DATA_VOLUME" > "${BACKUP_DIR}/volume-inspect.json"
+if [ -n "$DATA_PATH" ]; then
+  printf '%s\n' "{\"type\":\"bind\",\"path\":\"${DATA_PATH}\"}" > "${BACKUP_DIR}/volume-inspect.json"
+else
+  docker volume inspect "$DATA_VOLUME" > "${BACKUP_DIR}/volume-inspect.json"
+fi
 printf '%s\n' "$OLD_IMAGE_REFERENCE" > "${BACKUP_DIR}/old-image-reference.txt"
 printf '%s\n' "$OLD_IMAGE_ID" > "${BACKUP_DIR}/old-image-id.txt"
 printf '%s\n' "$NEW_IMAGE" > "${BACKUP_DIR}/new-image-reference.txt"
@@ -180,7 +194,7 @@ rollback() {
   docker rm -f "$CANDIDATE_NAME" "$PREPARE_NAME" "$CONTAINER_NAME" >/dev/null 2>&1 || true
   if [ "$BACKUP_READY" -eq 1 ]; then
     docker run --rm --user 0:0 \
-      -v "${DATA_VOLUME}:/data" \
+      -v "${DATA_MOUNT}:/data" \
       -v "${BACKUP_DIR}:/backup:ro" \
       --entrypoint sh "$NEW_IMAGE" \
       -c "find /data -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + && tar -C /data -xzf /backup/${ARCHIVE_NAME}"
@@ -207,7 +221,7 @@ run_state() {
   docker run --rm \
     -e DATABASE_URL=file:/data/prod.db \
     -e UPLOAD_DIR=/data/uploads \
-    -v "${DATA_VOLUME}:/data" \
+    -v "${DATA_MOUNT}:/data" \
     -v "${BACKUP_DIR}:/backup:ro" \
     "$NEW_IMAGE" node scripts/production-state.mjs "$@"
 }
@@ -248,7 +262,7 @@ if [ "$HAS_EXISTING_CONTAINER" -eq 1 ]; then
 fi
 
 docker run --rm --user 0:0 \
-  -v "${DATA_VOLUME}:/data:ro" \
+  -v "${DATA_MOUNT}:/data:ro" \
   -v "${BACKUP_DIR}:/backup" \
   --entrypoint sh "$NEW_IMAGE" \
   -c "tar -C /data -czf /backup/${ARCHIVE_NAME} ."
@@ -267,7 +281,7 @@ if [ "$HAS_EXISTING_CONTAINER" -eq 1 ]; then
 else
   RUNNING_BEFORE_STOP="false"
 fi
-echo "PRECHECK_RESULT container=${CONTAINER_NAME} running_before_stop=${RUNNING_BEFORE_STOP} volume=${DATA_VOLUME} old_image=${OLD_IMAGE_REFERENCE} self_hosted_runner=${RUNNER_NAME:-unknown} auth_secret_in_container=${container_auth_present} openai_api_key_in_container=${container_openai_present} ${BEFORE_STATE_SUMMARY}"
+echo "PRECHECK_RESULT container=${CONTAINER_NAME} running_before_stop=${RUNNING_BEFORE_STOP} data_mount=${DATA_MOUNT} old_image=${OLD_IMAGE_REFERENCE} self_hosted_runner=${RUNNER_NAME:-unknown} auth_secret_in_container=${container_auth_present} openai_api_key_in_container=${container_openai_present} ${BEFORE_STATE_SUMMARY}"
 
 ADMIN_BOOTSTRAP_SOURCE="skipped-existing-admin"
 ADMIN_BOOTSTRAP_FILE="none"
@@ -302,7 +316,7 @@ docker run --rm --name "$PREPARE_NAME" \
   -e ADMIN_BOOTSTRAP_PASSWORD="$ADMIN_BOOTSTRAP_PASSWORD" \
   -e ADMIN_BOOTSTRAP_NAME="$ADMIN_BOOTSTRAP_NAME" \
   -e SKIP_ADMIN_BOOTSTRAP="$SKIP_ADMIN_BOOTSTRAP" \
-  -v "${DATA_VOLUME}:/data" \
+  -v "${DATA_MOUNT}:/data" \
   "$NEW_IMAGE" sh -c '
     node node_modules/prisma/build/index.js migrate deploy &&
     node scripts/import-questions.mjs &&
@@ -326,7 +340,7 @@ docker run -d \
   -e OPENAI_API_KEY="$OPENAI_API_KEY" \
   -e SEED_ON_START=false \
   -e SEED_TEST_USERS=false \
-  -v "${DATA_VOLUME}:/data" \
+  -v "${DATA_MOUNT}:/data" \
   "$NEW_IMAGE" >/dev/null
 
 candidate_ready=false
@@ -365,7 +379,7 @@ docker run -d \
   -e OPENAI_API_KEY="$OPENAI_API_KEY" \
   -e SEED_ON_START=false \
   -e SEED_TEST_USERS=false \
-  -v "${DATA_VOLUME}:/data" \
+  -v "${DATA_MOUNT}:/data" \
   "$NEW_IMAGE" >/dev/null
 
 production_ready=false

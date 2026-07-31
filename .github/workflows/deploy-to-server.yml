@@ -13,7 +13,8 @@ permissions:
 
 env:
   IMAGE_NAME: ghcr.io/hitairou/em-ai-learning
-  CONTAINER_NAME: em-ai-learning
+  CONTAINER_NAME: rebuild-edesign-prod
+  DATA_PATH: /srv/rebuild/services/edesign-prod/data
   DATA_VOLUME: em-ai-learning-data
   HOST_PORT: "3010"
   CONTAINER_PORT: "3000"
@@ -179,9 +180,9 @@ jobs:
         run: |
           set -euo pipefail
           docker version >/dev/null
-          docker volume inspect "$DATA_VOLUME" >/dev/null
+          test -d "$DATA_PATH"
           if ! docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
-            echo "Production container ${CONTAINER_NAME} does not exist; deploy will recreate it from ${DATA_VOLUME}." >&2
+            echo "Production container ${CONTAINER_NAME} does not exist; deploy will recreate it from ${DATA_PATH}." >&2
           fi
 
       - name: Backup, deploy, verify, and rollback on failure
