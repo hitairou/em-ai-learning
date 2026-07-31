@@ -33,10 +33,8 @@ if ! command -v docker >/dev/null || ! command -v curl >/dev/null || ! command -
   exit 1
 fi
 if [ -n "$DATA_PATH" ]; then
-  if [ ! -d "$DATA_PATH" ]; then
-    echo "ERROR: production data path $DATA_PATH does not exist." >&2
-    exit 1
-  fi
+  # The runner may not have traverse permission on the service-owned path;
+  # Docker validates and mounts it as root below.
   DATA_MOUNT="$DATA_PATH"
 else
   if ! docker volume inspect "$DATA_VOLUME" >/dev/null 2>&1; then

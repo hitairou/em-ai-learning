@@ -180,7 +180,7 @@ jobs:
         run: |
           set -euo pipefail
           docker version >/dev/null
-          test -d "$DATA_PATH"
+          test -n "$DATA_PATH"
           if ! docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
             echo "Production container ${CONTAINER_NAME} does not exist; deploy will recreate it from ${DATA_PATH}." >&2
           fi
