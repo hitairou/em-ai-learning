@@ -57,7 +57,11 @@ configure_nginx_upload_limit() {
     | sudo tee "$NGINX_UPLOAD_CONF" >/dev/null
   sudo nginx -t >/dev/null
   if command -v systemctl >/dev/null 2>&1; then
-    sudo systemctl reload nginx
+    if sudo systemctl is-active --quiet nginx 2>/dev/null; then
+      sudo systemctl reload nginx
+    else
+      echo "WARN: nginx.service is inactive or masked; leaving the active reverse proxy unchanged." >&2
+    fi
   else
     sudo nginx -s reload
   fi
