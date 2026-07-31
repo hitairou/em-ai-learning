@@ -162,6 +162,14 @@ else
   OLD_IMAGE_ID="none"
 fi
 NEW_IMAGE_DIGEST="$(docker image inspect "$NEW_IMAGE" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)"
+RUNTIME_USER="1001:1001"
+if [ -n "$DATA_PATH" ]; then
+  RUNTIME_USER="$(docker run --rm --user 0:0 -v "${DATA_PATH}:/data:ro" "$NEW_IMAGE" sh -c 'stat -c "%u:%g" /data' 2>/dev/null || true)"
+  if [ -z "$RUNTIME_USER" ] || [ "$RUNTIME_USER" = "0:0" ]; then
+    echo "ERROR: could not determine writable data owner for $DATA_PATH." >&2
+    exit 1
+  fi
+fi
 BACKUP_READY=0
 OLD_RENAMED=0
 
@@ -221,6 +229,7 @@ trap rollback ERR
 
 run_state() {
   docker run --rm \
+    --user "$RUNTIME_USER" \
     -e DATABASE_URL=file:/data/prod.db \
     -e UPLOAD_DIR=/data/uploads \
     -v "${DATA_MOUNT}:/data" \
@@ -311,6 +320,7 @@ printf '%s\n' "$ADMIN_BOOTSTRAP_FILE" > "${BACKUP_DIR}/admin-bootstrap-file.txt"
 
 docker rm -f "$PREPARE_NAME" "$CANDIDATE_NAME" >/dev/null 2>&1 || true
 docker run --rm --name "$PREPARE_NAME" \
+  --user "$RUNTIME_USER" \
   -e NODE_ENV=production \
   -e DATABASE_URL=file:/data/prod.db \
   -e UPLOAD_DIR=/data/uploads \
@@ -334,6 +344,7 @@ docker run --rm --name "$PREPARE_NAME" \
 
 docker run -d \
   --name "$CANDIDATE_NAME" \
+  --user "$RUNTIME_USER" \
   -p "127.0.0.1:${CANDIDATE_PORT}:${CONTAINER_PORT}" \
   -e NODE_ENV=production \
   -e DATABASE_URL=file:/data/prod.db \
@@ -372,6 +383,7 @@ run_state --compare /backup/before-state.json \
 
 docker run -d \
   --name "$CONTAINER_NAME" \
+  --user "$RUNTIME_USER" \
   --restart unless-stopped \
   -p "127.0.0.1:${HOST_PORT}:${CONTAINER_PORT}" \
   -e NODE_ENV=production \
