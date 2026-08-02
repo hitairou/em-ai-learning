@@ -46,6 +46,13 @@ test("short text grading normalizes width, punctuation, and whitespace", () => {
   assert.equal(gradeDeterministically(target, "アンペールの法則").isCorrect, false);
 });
 
+test("short text grading accepts equivalent numeric notation and units", () => {
+  const target = problem({ answerKind: "short_text", correctAnswer: "\\(8.0\\,\\mathrm{A}\\)" });
+  assert.equal(gradeDeterministically(target, "8 A").isCorrect, true);
+  assert.equal(gradeDeterministically(target, "I = 8A").isCorrect, true);
+  assert.equal(gradeDeterministically(target, "8 V").isCorrect, false);
+});
+
 test("failed derivation grading stays pending and never becomes correct", () => {
   const grade = pendingDerivationGrade("電磁誘導");
   assert.equal(grade.status, "pending");

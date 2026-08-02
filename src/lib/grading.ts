@@ -147,7 +147,15 @@ function gradeNumeric(problem: GradeableProblem, userAnswer: string) {
 function gradeShortText(problem: GradeableProblem, userAnswer: string) {
   const expected = normalizeAnswer(problem.correctAnswer);
   const actual = normalizeAnswer(userAnswer);
-  const isCorrect = actual === expected || (expected.length >= 4 && actual.includes(expected));
+  const textualMatch = actual === expected || (expected.length >= 4 && actual.includes(expected));
+  const expectedValues = numbers(problem.correctAnswer);
+  const actualValues = numbers(userAnswer);
+  const units = expectedUnits(problem.correctAnswer);
+  const normalizedUser = userAnswer.normalize("NFKC").toLowerCase().replace(/\\(?:mathrm|text)\{([^}]*)\}/g, "$1");
+  const numericMatch = expectedValues.length === 1 && actualValues.length === 1
+    && Math.abs(expectedValues[0] - actualValues[0]) <= Math.max(1e-9, Math.abs(expectedValues[0]) * 0.01)
+    && units.every((unit) => normalizedUser.includes(unit));
+  const isCorrect = textualMatch || numericMatch;
   return result(problem, isCorrect, "concept_error");
 }
 
