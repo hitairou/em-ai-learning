@@ -23,7 +23,6 @@ jobs:
         run: |
           set -Eeuo pipefail
           test -n "$TARGET_LOGIN_EMAIL"
-          test -d "$DATA_PATH"
           IMAGE="$(docker inspect "$CONTAINER_NAME" --format '{{.Config.Image}}')"
           test -n "$IMAGE"
           STAMP="$(date -u +%Y%m%d-%H%M%S)"
