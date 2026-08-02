@@ -48,6 +48,8 @@ test("redirect paths stay same-origin", () => {
   assert.equal(safeInternalRedirect("/admin/problems"), "/admin/problems");
   assert.equal(safeInternalRedirect("//evil.example/path"), null);
   assert.equal(safeInternalRedirect("https://evil.example/path"), null);
+  assert.equal(safeInternalRedirect("javascript:alert(1)"), null);
+  assert.equal(safeInternalRedirect("/\\evil.example"), null);
   assert.equal(safeInternalRedirect(null), null);
 });
 

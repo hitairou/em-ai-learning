@@ -6,6 +6,8 @@ import { getEmailConfig } from "@/lib/email/config";
 import { emailVerificationCodeSchema } from "@/lib/validation";
 import { digestVerificationCode, hashBrowserToken, matchesDigest, PENDING_REGISTRATION_COOKIE } from "@/lib/auth/email-verification";
 import { clearPendingCookie } from "@/lib/auth/email-cookie";
+import { createSession } from "@/lib/auth/session";
+import { getLoginDestination } from "@/lib/auth/post-login-destination";
 
 export async function POST(request: Request) {
   const parsed = emailVerificationCodeSchema.safeParse(await request.json().catch(() => null));
@@ -24,16 +26,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: attempts >= config.maxAttempts ? "試行回数の上限に達しました。確認コードを再送してください" : "確認コードが違います" }, { status: attempts >= config.maxAttempts ? 429 : 400 });
   }
   try {
-    await db.$transaction(async (tx) => {
+    const user = await db.$transaction(async (tx) => {
       if (await tx.user.findUnique({ where: { email: pending.email }, select: { id: true } })) throw new Error("EMAIL_ALREADY_EXISTS");
-      await tx.user.create({ data: { email: pending.email, name: pending.name, passwordHash: pending.passwordHash, termsAcceptedAt: pending.termsAcceptedAt, termsVersion: pending.termsVersion, privacyAcknowledgedAt: pending.privacyAcknowledgedAt, privacyVersion: pending.privacyVersion, emailVerificationStatus: "verified", emailVerifiedAt: new Date() } });
+      const createdUser = await tx.user.create({ data: { email: pending.email, name: pending.name, passwordHash: pending.passwordHash, termsAcceptedAt: pending.termsAcceptedAt, termsVersion: pending.termsVersion, privacyAcknowledgedAt: pending.privacyAcknowledgedAt, privacyVersion: pending.privacyVersion, emailVerificationStatus: "verified", emailVerifiedAt: new Date() } });
       await tx.pendingRegistration.delete({ where: { id: pending.id } });
+      return createdUser;
     });
+    await createSession({ userId: user.id, role: user.role });
+    await clearPendingCookie();
+    return NextResponse.json({ next: getLoginDestination({ role: user.role, selectedCourse: user.selectedCourse, diagnosticCompleted: false }) });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return NextResponse.json({ error: "このメールアドレスは登録済みです。ログインしてください" }, { status: 409 });
     if (error instanceof Error && error.message === "EMAIL_ALREADY_EXISTS") return NextResponse.json({ error: "このメールアドレスは登録済みです。ログインしてください" }, { status: 409 });
     return NextResponse.json({ error: "メールアドレスを確認できませんでした" }, { status: 500 });
   }
-  await clearPendingCookie();
-  return NextResponse.json({ next: "/login?emailVerified=1" });
 }

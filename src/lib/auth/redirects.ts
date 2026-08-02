@@ -15,6 +15,6 @@ export function getLoginDestination(user: LoginRedirectUser) {
 }
 
 export function safeInternalRedirect(value: string | null | undefined) {
-  if (!value?.startsWith("/") || value.startsWith("//")) return null;
+  if (!value?.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) return null;
   return value;
 }
