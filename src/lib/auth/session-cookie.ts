@@ -1,6 +1,11 @@
 export const LEGACY_SESSION_COOKIE = "em-study-session";
 export const HOST_PREFIX_SESSION_COOKIE = "__Host-em-study-session";
 export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
+export const PENDING_REGISTRATION_TTL_SECONDS = 60 * 60 * 24;
+
+export function pendingRegistrationCookieOptions(nodeEnv = process.env.NODE_ENV) {
+  return { ...sessionCookieOptions(nodeEnv), maxAge: PENDING_REGISTRATION_TTL_SECONDS };
+}
 
 export interface SessionCookieCandidate {
   name: string;

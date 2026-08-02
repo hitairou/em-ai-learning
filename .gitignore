@@ -39,6 +39,7 @@ yarn-error.log*
 !.env.example
 /prisma/dev.db*
 /data/uploads/
+/tmp/
 
 # vercel
 .vercel

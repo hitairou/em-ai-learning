@@ -28,7 +28,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
     const requested = searchParams.get("next");
     const safeRequested = safeInternalRedirect(requested);
     const responseNext = safeInternalRedirect(typeof data.next === "string" ? data.next : null);
-    const destination = signup ? "/onboarding/course" : responseNext || safeRequested || "/home";
+    const destination = signup ? (typeof data.next === "string" ? data.next : "/verify-email") : responseNext || safeRequested || "/home";
 
     // A full navigation ensures the session cookie is committed before protected data is requested.
     window.location.assign(destination);

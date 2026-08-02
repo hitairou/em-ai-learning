@@ -56,6 +56,8 @@ Copy-Item .env.example .env
 
 `OPENAI_API_KEY` はサーバー環境だけに設定してください。`NEXT_PUBLIC_` を付けたり、クライアントコードへ渡したりしないでください。
 
+メール認証設定とMailgunのDNS手順は `docs/email-verification-mailgun.md` を参照してください。ローカル・CIでは `EMAIL_DELIVERY_MODE=test`、本番ではMailgunを使用します。`EMAIL_VERIFICATION_SECRET`は`openssl rand -base64 48`で生成し、Secretsへ登録してください。
+
 ## seedユーザー
 
 開発用のため、本番ではパスワード変更またはユーザー削除が必要です。
@@ -79,6 +81,7 @@ npm run db:deploy    # 本番migration適用
 npm run db:seed      # seed投入
 npm run uploads:cleanup:dry-run # 期限切れ元ファイルの削除対象確認
 npm run uploads:cleanup          # 期限切れ元ファイルを削除
+npm run registrations:cleanup:dry-run # 期限切れ仮登録の削除対象確認
 ```
 
 ## 写真・PDF質問

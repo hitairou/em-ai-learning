@@ -21,6 +21,8 @@ export const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+export const emailVerificationCodeSchema = z.object({ code: z.string().regex(/^\d{6}$/, "6桁の確認コードを入力してください") });
+
 export const courseSchema = z.object({
   course: z.enum(COURSES),
   learningPurpose: z.enum(LEARNING_PURPOSES),

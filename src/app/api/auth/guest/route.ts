@@ -19,6 +19,7 @@ export async function POST(request: Request) {
       name: "ゲスト",
       email: `guest-${id}@em-pass.local`,
       passwordHash,
+      emailVerificationStatus: "guest",
       termsAcceptedAt: new Date(), termsVersion: TERMS_VERSION,
       privacyAcknowledgedAt: new Date(), privacyVersion: PRIVACY_VERSION,
     },

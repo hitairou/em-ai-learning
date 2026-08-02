@@ -21,6 +21,7 @@ const migrationFiles = [
   path.join(repoRoot, "prisma", "migrations", "20260629130000_init", "migration.sql"),
   path.join(repoRoot, "prisma", "migrations", "20260712062046_integrate_electromagnetics_question_bank_834", "migration.sql"),
   path.join(repoRoot, "prisma", "migrations", "20260802000000_add_legal_upload_governance", "migration.sql"),
+  path.join(repoRoot, "prisma", "migrations", "20260802010000_add_email_verification", "migration.sql"),
 ];
 
 function sqliteUrl(filePath: string) {
