@@ -52,6 +52,7 @@ function noStore(response: NextResponse) {
 function canonicalOriginRedirect(request: NextRequest) {
   if (process.env.NODE_ENV !== "production") return null;
   const currentHost = normalizedHost(firstHeaderValue(request.headers.get("x-forwarded-host")) ?? request.headers.get("host"));
+  if (isLocalHost(currentHost)) return null;
   const forwardedProto = firstHeaderValue(request.headers.get("x-forwarded-proto"));
   const currentProto = forwardedProto ?? (request.nextUrl.protocol === "https:" ? "https" : null);
   const canonical = new URL(CANONICAL_PRODUCTION_ORIGIN);
@@ -62,6 +63,11 @@ function canonicalOriginRedirect(request: NextRequest) {
 
   const destination = new URL(`${request.nextUrl.pathname}${request.nextUrl.search}`, canonical);
   return destination;
+}
+
+function isLocalHost(host: string | null) {
+  const hostname = host?.replace(/:\d+$/, "");
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]" || hostname === "::1";
 }
 
 function normalizedHost(host: string | null) {

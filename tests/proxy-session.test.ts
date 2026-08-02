@@ -124,3 +124,17 @@ test("proxy canonicalizes non-production hostnames before protected routing", as
     assert.equal(response.headers.get("location"), "https://edesign.tairoh.com/home");
   });
 });
+
+test("proxy preserves local hosts when production mode is used for local verification", async () => {
+  await withProductionEnv(async () => {
+    const response = await proxy(new NextRequest("http://127.0.0.1:3000/home", {
+      headers: {
+        host: "127.0.0.1:3000",
+        "x-forwarded-host": "127.0.0.1:3000",
+        "x-forwarded-proto": "http",
+      },
+    }));
+    assert.equal(response.status, 307);
+    assert.equal(redirectPath(response), "/login?next=%2Fhome");
+  });
+});
