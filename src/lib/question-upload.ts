@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { analyzeQuestion } from "@/lib/ai/analyzeQuestion";
 import { extractPdfText } from "@/lib/uploads";
 import { ELECTROMAGNETISM_ONLY_MESSAGE, shouldAcceptInitialQuestion } from "@/lib/question-relevance";
+import { withRelatedProblem } from "@/lib/question-related-problem";
 import type { Course, QuestionInputType } from "@/types/learning";
 
 type UploadUser = {
@@ -38,12 +39,13 @@ export async function createQuestionSessionFromUpload(input: {
     orderBy: { score: "asc" },
     take: 3,
   });
-  const analysis = await analyzeQuestion({
+  const baseAnalysis = await analyzeQuestion({
     text: extractedText,
     selectedCourse: input.user.selectedCourse as Course,
     imagePath: input.imagePath,
     learnerContext: weakSkills.map((skill) => `${skill.topic}:${skill.score}`).join("、") || "診断履歴なし",
   });
+  const analysis = await withRelatedProblem({ userId: input.user.id, analysis: baseAnalysis });
   const session = await db.questionSession.create({
     data: {
       userId: input.user.id,
@@ -59,15 +61,6 @@ export async function createQuestionSessionFromUpload(input: {
           { role: "assistant", content: JSON.stringify(analysis) },
         ],
       },
-    },
-  });
-  await db.generatedSimilarProblem.create({
-    data: {
-      userId: input.user.id,
-      generatedQuestion: analysis.similarQuestion,
-      generatedSolution: analysis.similarSolution,
-      difficulty: 2,
-      topic: analysis.topic,
     },
   });
   return session;

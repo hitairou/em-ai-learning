@@ -3,6 +3,7 @@ import { apiUser } from "@/lib/auth/api";
 import { db } from "@/lib/db";
 import { analyzeQuestion } from "@/lib/ai/analyzeQuestion";
 import { ELECTROMAGNETISM_ONLY_MESSAGE, shouldAcceptFollowUpQuestion } from "@/lib/question-relevance";
+import { withRelatedProblem } from "@/lib/question-related-problem";
 import { chatMessageSchema, firstZodError } from "@/lib/validation";
 import type { Course } from "@/types/learning";
 
@@ -17,11 +18,12 @@ export async function POST(request: Request, context: RouteContext<"/api/chat/[i
   if (!shouldAcceptFollowUpQuestion(parsed.data.content)) {
     return NextResponse.json({ error: ELECTROMAGNETISM_ONLY_MESSAGE }, { status: 400 });
   }
-  const analysis = await analyzeQuestion({
+  const baseAnalysis = await analyzeQuestion({
     text: `元の問題:\n${session.extractedText}\n\n追加質問:\n${parsed.data.content}`,
     selectedCourse: session.course as Course,
     learnerContext: "追加質問には答えだけでなく、考え方を先に説明する",
   });
+  const analysis = await withRelatedProblem({ userId: auth.user.id, analysis: baseAnalysis });
   await db.$transaction([
     db.chatMessage.create({ data: { sessionId: id, role: "user", content: parsed.data.content } }),
     db.chatMessage.create({ data: { sessionId: id, role: "assistant", content: JSON.stringify(analysis) } }),

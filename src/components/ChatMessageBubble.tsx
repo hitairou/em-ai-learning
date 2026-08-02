@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import RichMathText from "@/components/RichMathText";
 import type { QuestionAnalysis } from "@/types/learning";
 
 function isAnalysis(value: unknown): value is QuestionAnalysis {
@@ -16,7 +19,20 @@ export default function ChatMessageBubble({ role, content }: { role: string; con
       <section><h3>解法ステップ</h3><ol>{content.steps.map((step, index) => <li key={`${index}-${step}`}>{step}</li>)}</ol></section>
       <section className="answerSection"><h3>最終答え</h3><p>{content.finalAnswer}</p></section>
       <section><h3>よくあるミス</h3><ul>{content.commonMistakes.map((mistake) => <li key={mistake}>{mistake}</li>)}</ul></section>
-      <details><summary>類題に挑戦</summary><p>{content.similarQuestion}</p><div className="detailsAnswer">{content.similarSolution}</div></details>
+      <section>
+        <h3>類題に挑戦</h3>
+        {content.relatedProblem ? (
+          <div className="similarProblem">
+            <strong>{content.relatedProblem.title}</strong>
+            <RichMathText text={content.relatedProblem.questionText} />
+            <Link className="button secondaryButton" href={`/practice/${content.relatedProblem.id}`}>
+              この問題を解く <ArrowRight size={16} />
+            </Link>
+          </div>
+        ) : (
+          <p>現在、条件に合う公開済みの既存問題は見つかりませんでした。</p>
+        )}
+      </section>
     </div>
   );
 }

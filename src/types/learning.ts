@@ -93,6 +93,7 @@ export interface QuestionAnalysis {
   commonMistakes: string[];
   similarQuestion: string;
   similarSolution: string;
+  relatedProblem?: ProblemView | null;
 }
 
 export interface SkillSummary {

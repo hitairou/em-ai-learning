@@ -6,7 +6,7 @@ import { gradeAnswerPrompt } from "@/lib/ai/prompts/grade-answer";
 import { parseAiJson } from "@/lib/ai/helpers";
 import { MISTAKE_TYPES, type GradeResult } from "@/types/learning";
 import { parseJson } from "@/lib/json";
-import { contradictoryDerivationGrade, gradeDeterministically, pendingDerivationGrade } from "@/lib/grading";
+import { gradeDeterministically, pendingDerivationGrade } from "@/lib/grading";
 
 const schema = z.object({
   isCorrect: z.boolean(),
@@ -19,14 +19,13 @@ const schema = z.object({
 });
 
 export async function gradeAnswer(problem: Problem, userAnswer: string): Promise<GradeResult> {
-  if (problem.answerKind !== "derivation") return gradeDeterministically(problem, userAnswer);
-  const contradiction = contradictoryDerivationGrade(problem, userAnswer);
-  if (contradiction) return contradiction;
+  if (problem.answerKind === "choice") return gradeDeterministically(problem, userAnswer);
   const client = getAiClient();
   if (!client) return pendingDerivationGrade(problem.topic);
   try {
     const rubric = {
       question: problem.questionText,
+      answerKind: problem.answerKind,
       conciseAnswer: problem.correctAnswer,
       solution: problem.solution,
       explanation: problem.explanation,

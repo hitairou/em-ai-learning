@@ -154,3 +154,66 @@ export async function findSimilarProblem(input: { userId: string; sourceProblemI
   ]);
   return rankSimilarProblems(source, candidates, attempts)[0] ?? null;
 }
+
+export async function findRelatedProblemForQuestion(input: {
+  userId: string;
+  course: string;
+  topic: string;
+  laws?: string[];
+}) {
+  const course = normalizeCourse(input.course);
+  if (!course) return null;
+  const [candidates, attempts] = await Promise.all([
+    db.problem.findMany({
+      where: {
+        ...publishedProblemWhere,
+        course: { in: courseAliases(course) },
+      },
+    }),
+    db.practiceAttempt.findMany({
+      where: { userId: input.userId },
+      select: { problemId: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+  const latestAttempt = new Map<string, number>();
+  for (const attempt of attempts) {
+    latestAttempt.set(attempt.problemId, Math.max(attempt.createdAt.getTime(), latestAttempt.get(attempt.problemId) ?? 0));
+  }
+  const topic = normalizeSearchText(input.topic);
+  const laws = (input.laws ?? []).map(normalizeSearchText).filter(Boolean);
+
+  return [...candidates].sort((a, b) => {
+    const comparisons = [
+      relatedScore(b, topic, laws) - relatedScore(a, topic, laws),
+      Number(latestAttempt.has(a.id)) - Number(latestAttempt.has(b.id)),
+      (latestAttempt.get(a.id) ?? 0) - (latestAttempt.get(b.id) ?? 0),
+      a.difficulty - b.difficulty,
+    ];
+    for (const comparison of comparisons) if (comparison !== 0) return comparison;
+    return (a.appQuestionId ?? a.id).localeCompare(b.appQuestionId ?? b.id);
+  })[0] ?? null;
+}
+
+function normalizeSearchText(value: string) {
+  return value.normalize("NFKC").toLowerCase().replace(/\s+/g, "");
+}
+
+function relatedScore(problem: Problem, topic: string, laws: string[]) {
+  const problemTopic = normalizeSearchText(problem.topic);
+  const problemUnit = normalizeSearchText(problem.unit);
+  const problemTitle = normalizeSearchText(problem.title);
+  const problemText = normalizeSearchText(problem.questionText);
+  const formulas = normalizeSearchText(problem.requiredFormulasJson);
+  let score = 0;
+  if (topic && problemTopic === topic) score += 80;
+  else if (topic && (problemTopic.includes(topic) || topic.includes(problemTopic))) score += 48;
+  if (topic && (problemUnit.includes(topic) || topic.includes(problemUnit))) score += 28;
+  if (topic && (problemTitle.includes(topic) || problemText.includes(topic))) score += 18;
+  for (const law of laws) {
+    if (!law) continue;
+    if (formulas.includes(law) || problemText.includes(law) || problemTitle.includes(law)) score += 10;
+  }
+  score += Math.max(0, 6 - problem.difficulty);
+  return score;
+}
