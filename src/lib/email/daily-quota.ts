@@ -32,7 +32,7 @@ export async function reserveDailyEmailSend(db: DbClient, limit: number, now = n
           data: { sendCount: { increment: 1 } },
         });
         if (reserved.count !== 1) throw new DailyEmailQuotaExceededError();
-      });
+      }, { maxWait: 30_000, timeout: 30_000 });
       return { dateKey };
     } catch (error) {
       if (error instanceof DailyEmailQuotaExceededError || !isRetryableSqliteConflict(error) || attempt >= 12) throw error;
