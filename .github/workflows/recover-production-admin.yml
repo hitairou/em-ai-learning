@@ -60,7 +60,11 @@ jobs:
           echo "BACKUP_RESULT status=success archive=$(basename "$ARCHIVE")"
           docker start "$CONTAINER_NAME" >/dev/null
           restarted=0
-          docker run --rm --user 1001:1001 \
+          # The production data directory may be owned by the image's runtime UID
+          # or by root when it is backed by a bind mount. This is a one-shot,
+          # credential-free maintenance container; keep the app stopped only for
+          # the backup and use root solely for the transactional SQLite update.
+          docker run --rm --user 0:0 \
             -e DATABASE_URL=file:/data/prod.db \
             -e ADMIN_RECOVERY_EMAIL \
             -e ADMIN_RECOVERY_PASSWORD \
