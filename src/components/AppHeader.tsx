@@ -29,7 +29,7 @@ export default function AppHeader({ user }: { user: HeaderUser | null }) {
               <span className="brandMark">E</span>
               <span>
                 EM PASS
-                <small>徳島大学 電磁気学習室</small>
+                <small>電磁気AI学習支援</small>
               </span>
             </Link>
           </div>

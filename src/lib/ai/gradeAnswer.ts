@@ -37,6 +37,7 @@ export async function gradeAnswer(problem: Problem, userAnswer: string): Promise
     };
     const response = await client.responses.create({
       model: AI_MODEL,
+      store: false,
       input: `${gradeAnswerPrompt()}\n保存済み採点基準:\n${JSON.stringify(rubric)}`,
     });
     return { status: "completed", ...schema.parse(parseAiJson(response.output_text)) };

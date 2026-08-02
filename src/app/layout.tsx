@@ -4,9 +4,10 @@ import "./globals.css";
 import AppHeader from "@/components/AppHeader";
 import BottomNavigation from "@/components/BottomNavigation";
 import { getCurrentUser } from "@/lib/auth/user";
+import LegalFooter from "@/components/LegalFooter";
 
 export const metadata: Metadata = {
-  title: { default: "EM PASS | 徳島大学 電磁気学習室", template: "%s | EM PASS" },
+  title: { default: "EM PASS | 電磁気AI学習支援", template: "%s | EM PASS" },
   description: "電磁気1・2の苦手を診断し、今日やるべき問題へ導くAI学習支援アプリ",
 };
 
@@ -18,6 +19,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <AppHeader user={user ? { name: user.name, role: user.role, selectedCourse: user.selectedCourse } : null} />
         <main className={user ? "appMain" : "publicMain"}>{children}</main>
         {user && <BottomNavigation />}
+        <LegalFooter />
       </body>
     </html>
   );

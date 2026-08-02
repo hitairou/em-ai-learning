@@ -21,6 +21,9 @@ OPENAI_API_KEY="${OPENAI_API_KEY:-}"
 ADMIN_BOOTSTRAP_EMAIL="${ADMIN_BOOTSTRAP_EMAIL:-}"
 ADMIN_BOOTSTRAP_PASSWORD="${ADMIN_BOOTSTRAP_PASSWORD:-}"
 ADMIN_BOOTSTRAP_NAME="${ADMIN_BOOTSTRAP_NAME:-Administrator}"
+SERVICE_OPERATOR_NAME="${SERVICE_OPERATOR_NAME:-}"
+LEGAL_CONTACT_EMAIL="${LEGAL_CONTACT_EMAIL:-}"
+UPLOAD_RETENTION_DAYS="${UPLOAD_RETENTION_DAYS:-30}"
 NGINX_UPLOAD_LIMIT="${NGINX_UPLOAD_LIMIT:-12m}"
 NGINX_UPLOAD_CONF="${NGINX_UPLOAD_CONF:-/etc/nginx/conf.d/em-ai-learning-upload-size.conf}"
 PROXY_NETWORK="${PROXY_NETWORK:-}"
@@ -30,6 +33,8 @@ if [ -z "$NEW_IMAGE" ]; then
   echo "ERROR: NEW_IMAGE is required." >&2
   exit 1
 fi
+if [ -z "$SERVICE_OPERATOR_NAME" ] || [ -z "$LEGAL_CONTACT_EMAIL" ] || ! [[ "$LEGAL_CONTACT_EMAIL" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]]; then echo "ERROR: legal operator and contact environment are required and contact must be valid." >&2; exit 1; fi
+if ! [[ "$UPLOAD_RETENTION_DAYS" =~ ^[0-9]+$ ]] || [ "$UPLOAD_RETENTION_DAYS" -lt 1 ] || [ "$UPLOAD_RETENTION_DAYS" -gt 365 ]; then echo "ERROR: UPLOAD_RETENTION_DAYS must be an integer from 1 to 365." >&2; exit 1; fi
 if ! command -v docker >/dev/null || ! command -v curl >/dev/null || ! command -v tar >/dev/null || ! command -v openssl >/dev/null; then
   echo "ERROR: docker, curl, tar, and openssl are required." >&2
   exit 1
@@ -353,6 +358,9 @@ docker run -d \
   -e UPLOAD_DIR=/data/uploads \
   -e AUTH_SECRET="$AUTH_SECRET" \
   -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+  -e SERVICE_OPERATOR_NAME="$SERVICE_OPERATOR_NAME" \
+  -e LEGAL_CONTACT_EMAIL="$LEGAL_CONTACT_EMAIL" \
+  -e UPLOAD_RETENTION_DAYS="$UPLOAD_RETENTION_DAYS" \
   -e SEED_ON_START=false \
   -e SEED_TEST_USERS=false \
   -v "${DATA_MOUNT}:/data" \
@@ -393,6 +401,9 @@ docker run -d \
   -e UPLOAD_DIR=/data/uploads \
   -e AUTH_SECRET="$AUTH_SECRET" \
   -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+  -e SERVICE_OPERATOR_NAME="$SERVICE_OPERATOR_NAME" \
+  -e LEGAL_CONTACT_EMAIL="$LEGAL_CONTACT_EMAIL" \
+  -e UPLOAD_RETENTION_DAYS="$UPLOAD_RETENTION_DAYS" \
   -e SEED_ON_START=false \
   -e SEED_TEST_USERS=false \
   -v "${DATA_MOUNT}:/data" \

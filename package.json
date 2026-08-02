@@ -22,7 +22,9 @@
     "db:review:export": "node scripts/export-review-state.mjs",
     "db:review:apply": "node scripts/apply-review-state.mjs",
     "db:ensure-admin": "node scripts/ensure-admin.mjs",
-    "db:state": "node scripts/production-state.mjs"
+    "db:state": "node scripts/production-state.mjs",
+    "uploads:cleanup": "node scripts/cleanup-expired-uploads.mjs",
+    "uploads:cleanup:dry-run": "node scripts/cleanup-expired-uploads.mjs --dry-run"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

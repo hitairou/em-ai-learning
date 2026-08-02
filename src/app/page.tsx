@@ -7,11 +7,12 @@ export default function LandingPage() {
     <div className="landingPage">
       <section className="landingHero">
         <div className="heroCopy">
-          <span className="eyebrow">TOKUSHIMA UNIVERSITY / ELECTROMAGNETISM</span>
+          <span className="eyebrow">INDEPENDENT ELECTROMAGNETISM STUDY SUPPORT</span>
           <h1><span className="heroLine">電磁気の「わからない」を，</span><em className="heroLine">今日やる１問に変える．</em></h1>
           <p>電磁気1・2に特化した診断と演習。写真で質問した問題も、苦手分析と次の復習につながります。</p>
           <div className="heroButtons"><Link className="button primaryButton" href="/signup">アカウント作成 <ArrowRight size={18} /></Link><Link className="button ghostButton" href="/login">ログイン</Link><GuestStartButton variant="subtle" /></div>
           <p className="guestNote">ゲストモードの履歴はこの端末のCookieに紐づきます。</p>
+          <p className="legalNotice">本サービスは独立して運営される非公式の学習支援サービスです。特定の大学・学部・教員による公認、監修、運営サービスではありません。掲載問題は独自に生成・作成された演習問題であり、実際の試験問題または将来の出題を示すものではありません。</p>
           <div className="heroProof"><span><CheckCircle2 /> 5問で苦手診断</span><span><CheckCircle2 /> 登録無料</span></div>
         </div>
         <div className="heroVisual" aria-label="学習フローのイメージ">

@@ -12,6 +12,7 @@ const schema = z.object({
   uploadId: z.string().regex(/^[a-zA-Z0-9_-]{12,80}$/),
   fileName: z.string().min(1).max(240),
   text: z.string().max(20000).default(""),
+  rightsConfirmed: z.enum(["true"]).transform(() => true),
   index: z.coerce.number().int().min(0).max(99),
   total: z.coerce.number().int().min(1).max(100),
 });
@@ -28,6 +29,7 @@ export async function POST(request: Request) {
     uploadId: String(form.get("uploadId") ?? ""),
     fileName: String(form.get("fileName") ?? ""),
     text: String(form.get("text") ?? ""),
+    rightsConfirmed: String(form.get("rightsConfirmed") ?? ""),
     index: form.get("index"),
     total: form.get("total"),
   });
@@ -73,6 +75,7 @@ export async function POST(request: Request) {
       originalFilePath: target,
       imagePath: inputType === "image" ? target : null,
       fileName: parsed.data.fileName,
+      rightsConfirmed: parsed.data.rightsConfirmed,
     });
     return NextResponse.json({ complete: true, id: session.id }, { status: 201 });
   } catch (error) {

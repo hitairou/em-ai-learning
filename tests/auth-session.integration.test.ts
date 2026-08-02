@@ -11,6 +11,7 @@ import test from "node:test";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 import { sessionCookieName } from "../src/lib/auth/session-cookie";
+import { PRIVACY_VERSION, TERMS_VERSION } from "../src/lib/legal/config";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -19,6 +20,7 @@ const password = "SessionTest123";
 const migrationFiles = [
   path.join(repoRoot, "prisma", "migrations", "20260629130000_init", "migration.sql"),
   path.join(repoRoot, "prisma", "migrations", "20260712062046_integrate_electromagnetics_question_bank_834", "migration.sql"),
+  path.join(repoRoot, "prisma", "migrations", "20260802000000_add_legal_upload_governance", "migration.sql"),
 ];
 
 function sqliteUrl(filePath: string) {
@@ -122,6 +124,10 @@ async function createUser(prisma: PrismaClient, input: {
       learningPurpose: input.learningPurpose ?? null,
       onboardingCompleted: input.onboardingCompleted ?? false,
       diagnosticCompleted: input.diagnosticCompleted ?? false,
+      termsAcceptedAt: new Date(),
+      termsVersion: TERMS_VERSION,
+      privacyAcknowledgedAt: new Date(),
+      privacyVersion: PRIVACY_VERSION,
     },
   });
 }

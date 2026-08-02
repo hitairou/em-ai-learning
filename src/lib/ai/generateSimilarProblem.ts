@@ -18,6 +18,7 @@ export async function generateSimilarProblem(problem: Problem) {
     try {
       const response = await client.responses.create({
         model: AI_MODEL,
+        store: false,
         input: `${generateSimilarPrompt()}\n元問題:${problem.questionText}\n元解答:${problem.solution}`,
       });
       return schema.parse(parseAiJson(response.output_text));

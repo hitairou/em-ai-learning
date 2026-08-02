@@ -35,6 +35,7 @@ export async function generatePractice(input: {
   try {
     const response = await client.responses.parse({
       model: AI_MODEL,
+      store: false,
       input: `${generatePracticePrompt()}\n科目:${input.course}\nモード:${input.mode}\n苦手単元:${input.weakTopics.join("、")}`,
       text: { format: zodTextFormat(schema, "generated_practice") },
     });

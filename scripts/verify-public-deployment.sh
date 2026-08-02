@@ -7,9 +7,11 @@ STAMP="$(date -u +%Y%m%d-%H%M%S)"
 TMP_ROOT="${RUNNER_TEMP:-/tmp}/em-ai-learning-public-root-${STAMP}.html"
 TMP_LOGIN="${RUNNER_TEMP:-/tmp}/em-ai-learning-public-login-${STAMP}.html"
 TMP_CSS="${RUNNER_TEMP:-/tmp}/em-ai-learning-public-css-${STAMP}.txt"
+TMP_TERMS="${RUNNER_TEMP:-/tmp}/em-ai-learning-public-terms-${STAMP}.html"
+TMP_PRIVACY="${RUNNER_TEMP:-/tmp}/em-ai-learning-public-privacy-${STAMP}.html"
 
 cleanup() {
-  rm -f "$TMP_ROOT" "$TMP_LOGIN" "$TMP_CSS" >/dev/null 2>&1 || true
+  rm -f "$TMP_ROOT" "$TMP_LOGIN" "$TMP_CSS" "$TMP_TERMS" "$TMP_PRIVACY" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -53,6 +55,12 @@ check_html_assets() {
 fetch_with_retry "${BASE_URL}/api/health" /dev/null "public health"
 fetch_with_retry "$BASE_URL" "$TMP_ROOT" "public root"
 fetch_with_retry "${BASE_URL}/login" "$TMP_LOGIN" "public login"
+fetch_with_retry "${BASE_URL}/terms" "$TMP_TERMS" "terms"
+fetch_with_retry "${BASE_URL}/privacy" "$TMP_PRIVACY" "privacy"
+grep -q '2026-08-02' "$TMP_TERMS"
+grep -q 'OpenAI API' "$TMP_PRIVACY"
+grep -q '非公式' "$TMP_ROOT"
+if grep -q 'TOKUSHIMA UNIVERSITY / ELECTROMAGNETISM' "$TMP_ROOT"; then echo "ERROR: university-specific landing copy remains" >&2; exit 1; fi
 check_html_assets "$BASE_URL" "$TMP_ROOT" "public root"
 check_html_assets "$BASE_URL" "$TMP_LOGIN" "public login"
 

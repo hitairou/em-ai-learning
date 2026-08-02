@@ -36,6 +36,7 @@ export async function gradeImageAnswer(problem: Problem, image: File, note?: str
     };
     const response = await client.responses.create({
       model: AI_MODEL,
+      store: false,
       input: [
         {
           role: "user",

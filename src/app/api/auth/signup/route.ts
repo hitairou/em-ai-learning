@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createSession } from "@/lib/auth/session";
 import { firstZodError, signupSchema } from "@/lib/validation";
+import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal/config";
 
 export async function POST(request: Request) {
   const parsed = signupSchema.safeParse(await request.json().catch(() => null));
@@ -17,6 +18,10 @@ export async function POST(request: Request) {
         name: parsed.data.name,
         email: parsed.data.email,
         passwordHash,
+        termsAcceptedAt: new Date(),
+        termsVersion: TERMS_VERSION,
+        privacyAcknowledgedAt: new Date(),
+        privacyVersion: PRIVACY_VERSION,
       },
     });
     await createSession({ userId: user.id, role: user.role });

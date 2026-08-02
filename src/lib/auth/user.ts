@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { readSession } from "@/lib/auth/session";
 import { normalizeCourse } from "@/lib/courses";
+import { hasCurrentConsent } from "@/lib/legal/config";
 
 export async function getCurrentUser() {
   const session = await readSession();
@@ -19,6 +20,8 @@ export async function getCurrentUser() {
       onboardingCompleted: true,
       diagnosticCompleted: true,
       createdAt: true,
+      termsVersion: true,
+      privacyVersion: true,
     },
   });
   if (!user) return null;
@@ -32,6 +35,7 @@ export async function getCurrentUser() {
 export async function requireUser() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  if (!hasCurrentConsent(user)) redirect("/legal/consent");
   return user;
 }
 
@@ -42,7 +46,10 @@ export async function requireSelectedCourse() {
 }
 
 export async function requireCompletedUser() {
-  return requireSelectedCourse();
+  const user = await requireUser();
+  if (!hasCurrentConsent(user)) redirect("/legal/consent");
+  if (!user.selectedCourse) redirect("/onboarding/course");
+  return user;
 }
 
 export async function requireAdmin() {

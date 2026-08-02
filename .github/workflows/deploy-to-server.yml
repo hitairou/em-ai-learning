@@ -196,6 +196,9 @@ jobs:
           GHCR_FALLBACK_TOKEN: ${{ github.token }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SERVICE_OPERATOR_NAME: ${{ vars.SERVICE_OPERATOR_NAME }}
+          LEGAL_CONTACT_EMAIL: ${{ vars.LEGAL_CONTACT_EMAIL }}
+          UPLOAD_RETENTION_DAYS: ${{ vars.UPLOAD_RETENTION_DAYS || '30' }}
           ADMIN_BOOTSTRAP_EMAIL: ${{ secrets.ADMIN_BOOTSTRAP_EMAIL }}
           ADMIN_BOOTSTRAP_PASSWORD: ${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}
           ADMIN_BOOTSTRAP_NAME: ${{ secrets.ADMIN_BOOTSTRAP_NAME }}

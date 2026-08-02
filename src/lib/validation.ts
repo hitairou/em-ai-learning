@@ -10,7 +10,11 @@ export const signupSchema = z.object({
     .min(8, "パスワードは8文字以上で入力してください")
     .regex(/[A-Za-z]/, "英字を1文字以上含めてください")
     .regex(/[0-9]/, "数字を1文字以上含めてください"),
+  acceptTerms: z.literal(true, { error: "利用規約への同意が必要です" }),
+  acknowledgePrivacy: z.literal(true, { error: "プライバシーポリシーの確認が必要です" }),
 });
+
+export const consentSchema = z.object({ acceptTerms: z.literal(true), acknowledgePrivacy: z.literal(true) });
 
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),

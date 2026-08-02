@@ -17,6 +17,10 @@ model User {
   learningPurpose     String?
   onboardingCompleted Boolean                   @default(false)
   diagnosticCompleted Boolean                   @default(false)
+  termsAcceptedAt    DateTime?
+  termsVersion       String?
+  privacyAcknowledgedAt DateTime?
+  privacyVersion     String?
   createdAt           DateTime                  @default(now())
   updatedAt           DateTime                  @updatedAt
   diagnosticAttempts  DiagnosticAttempt[]
@@ -142,6 +146,10 @@ model QuestionSession {
   course           String
   inputType        String
   originalFilePath String?
+  uploadRightsConfirmedAt DateTime?
+  uploadPolicyVersion String?
+  originalFileDeleteAt DateTime?
+  originalFileDeletedAt DateTime?
   extractedText    String
   detectedTopic    String?
   aiSummary        String?
@@ -151,6 +159,7 @@ model QuestionSession {
   messages         ChatMessage[]
 
   @@index([userId, createdAt])
+  @@index([originalFileDeleteAt, originalFileDeletedAt])
 }
 
 model ChatMessage {
