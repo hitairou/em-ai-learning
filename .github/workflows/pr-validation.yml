@@ -1,0 +1,91 @@
+name: pr-validation
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NODE_ENV: test
+      DATABASE_URL: file:../tmp/pr-validation.db
+      AUTH_SECRET: ci-only-auth-secret-with-at-least-32-characters
+      EMAIL_VERIFICATION_SECRET: ci-only-email-secret-with-at-least-32-characters
+      EMAIL_DELIVERY_MODE: test
+      MAILGUN_DOMAIN: auth.example.com
+      MAILGUN_API_URL: https://api.mailgun.net
+      EMAIL_FROM_ADDRESS: no-reply@auth.example.com
+      EMAIL_FROM_NAME: EM PASS CI
+      EMAIL_REPLY_TO: support@example.com
+      EMAIL_CODE_TTL_MINUTES: "10"
+      EMAIL_RESEND_COOLDOWN_SECONDS: "60"
+      EMAIL_MAX_ATTEMPTS: "5"
+      EMAIL_MAX_SENDS_PER_HOUR: "5"
+      PENDING_REGISTRATION_TTL_HOURS: "24"
+      MAILGUN_DAILY_SEND_LIMIT: "5"
+      SERVICE_OPERATOR_NAME: EM PASS CI
+      LEGAL_CONTACT_EMAIL: support@example.com
+      UPLOAD_RETENTION_DAYS: "30"
+      OPENAI_API_KEY: ""
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate fresh SQLite database and problem import
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p tmp
+          rm -f tmp/pr-validation.db tmp/pr-validation.db-shm tmp/pr-validation.db-wal
+          npm run db:generate
+          npx prisma migrate deploy
+          npx prisma migrate status
+          node scripts/verify-ci-database.mjs
+          node scripts/import-questions.mjs
+          node scripts/import-questions.mjs --verify-initial
+
+      - name: Run application tests
+        run: npm test
+
+      - name: Validate deployment automation
+        run: npm run test:deploy
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
+
+      - name: Build Docker image without publishing
+        run: docker build --tag em-pass-pr-validation .
+
+      - name: Remove CI database
+        if: always()
+        shell: bash
+        run: rm -f tmp/pr-validation.db tmp/pr-validation.db-shm tmp/pr-validation.db-wal

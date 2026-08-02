@@ -98,3 +98,19 @@ test("production deploy validates and forwards email verification settings", asy
   assert.match(script, /MAILGUN_API_KEY="\$\{MAILGUN_API_KEY:-\}"/); assert.match(script, /EMAIL_DELIVERY_MODE.*mailgun/);
   assert.match(workflow, /secrets\.MAILGUN_API_KEY/); assert.match(workflow, /secrets\.EMAIL_VERIFICATION_SECRET/); assert.match(workflow, /vars\.MAILGUN_DOMAIN/); assert.match(workflow, /vars\.MAILGUN_DAILY_SEND_LIMIT/);
 });
+
+test("PR validation is isolated from production and validates the fresh database", async () => {
+  const workflow = await text(".github/workflows/pr-validation.yml");
+  assert.match(workflow, /pull_request:/);
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /permissions:\s*\n\s*contents: read/);
+  assert.match(workflow, /runs-on: ubuntu-latest/);
+  assert.doesNotMatch(workflow, /self-hosted|ecorun-esprimo|secrets\.|deploy-production|ssh /);
+  assert.match(workflow, /cancel-in-progress: true/);
+  assert.match(workflow, /EMAIL_DELIVERY_MODE: test/);
+  assert.match(workflow, /docker build --tag em-pass-pr-validation/);
+  assert.match(workflow, /prisma migrate deploy/);
+  assert.match(workflow, /verify-ci-database\.mjs/);
+  assert.match(workflow, /import-questions\.mjs --verify-initial/);
+  assert.match(workflow, /if: always\(\)/);
+});
