@@ -26,6 +26,7 @@ async function main() {
       email: credentials.email,
       passwordHash: await bcrypt.hash(credentials.password, 12),
       role: "admin",
+      emailVerificationStatus: "system",
     },
   });
   console.log(JSON.stringify({ existingAdminCount: 0, created: true }));

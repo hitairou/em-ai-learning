@@ -248,12 +248,13 @@ async function main() {
 
     await prisma.user.upsert({
       where: { email: "admin@em-study.local" },
-      update: { role: "admin" },
+      update: { role: "admin", emailVerificationStatus: "system" },
       create: {
         name: "管理者",
         email: "admin@em-study.local",
         passwordHash: adminPassword,
         role: "admin",
+        emailVerificationStatus: "system",
         selectedCourse: "em1",
         learningPurpose: "exam",
         onboardingCompleted: true,
@@ -269,6 +270,7 @@ async function main() {
         email: "student@em-study.local",
         passwordHash: studentPassword,
         role: "user",
+        emailVerificationStatus: "legacy_exempt",
         selectedCourse: "em1",
         learningPurpose: "foundation",
         onboardingCompleted: true,

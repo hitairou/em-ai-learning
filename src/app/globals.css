@@ -41,6 +41,26 @@ button { color: inherit; }
 .iconButton { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; }
 .authLinks { font-size: 14px; font-weight: 600; }
 .publicMain, .appMain { min-height: calc(100vh - 72px); }
+.legalFooter { max-width: 1180px; margin: 0 auto; padding: 28px 28px 36px; color: var(--muted); font-size: 11px; line-height: 1.8; }
+.verifyPanel { display: grid; gap: 14px; }.verifyPanel p { line-height: 1.8; }.verifyCodeInput { letter-spacing: .35em; font-size: 24px; text-align: center; }.successNotice { padding: 12px 14px; border-radius: 9px; color: var(--teal-dark); background: #e9f6ee; }
+.legalFooter p { max-width: 760px; margin: 0 0 8px; }
+.legalFooter nav { display: flex; flex-wrap: wrap; gap: 14px; }
+.legalFooter a { color: var(--teal); text-decoration: underline; text-underline-offset: 3px; }
+.legalFooter small { display: block; margin-top: 8px; }
+.legalPage, .legalConsentPage { width: min(820px, calc(100% - 32px)); margin: 0 auto; padding: 60px 0 80px; }
+.legalPage h1, .legalConsentPage h1 { margin: 0 0 30px; font-size: clamp(32px, 5vw, 52px); }
+.legalBody { padding: 28px clamp(20px, 5vw, 54px); border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
+.legalBody h2 { margin: 30px 0 10px; font-size: 20px; }
+.legalBody h2:first-of-type { margin-top: 0; }
+.legalBody p { color: var(--ink-2); line-height: 2; }
+.legalBody code { padding: 2px 5px; border-radius: 4px; background: #edf3ee; }
+.legalConsentPage { max-width: 620px; }
+.legalConsentPage > p { color: var(--muted); line-height: 1.8; }
+.checkLabel { margin: 12px 0; display: flex; align-items: flex-start; gap: 9px; color: var(--ink-2); font-size: 13px; line-height: 1.7; cursor: pointer; }
+.checkLabel input { width: 18px; height: 18px; flex: 0 0 auto; accent-color: var(--teal); }
+.checkLabel a { color: var(--teal); text-decoration: underline; }
+.consentFields { margin: 16px 0; padding: 14px; border-radius: 10px; background: #f1f7f1; }
+.legalNotice { max-width: 650px !important; margin-top: 18px !important; padding: 14px 16px; border-left: 4px solid var(--lime); color: var(--muted) !important; font-size: 12px !important; line-height: 1.8 !important; background: rgba(255,255,255,.55); }
 .appMain { max-width: 1180px; margin: 0 auto; padding: 44px 28px 90px; }
 
 .button { min-height: 48px; padding: 0 21px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid transparent; border-radius: 12px; cursor: pointer; font-weight: 700; transition: transform .18s ease, box-shadow .18s ease, background .18s ease; }

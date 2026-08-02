@@ -16,6 +16,7 @@ export default function CameraUploadCard() {
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
 
   async function submit() {
     if (!file && !text.trim()) return;
@@ -24,8 +25,8 @@ export default function CameraUploadCard() {
     try {
       const uploadFile = file ? await prepareUploadFile(file) : null;
       const data = uploadFile && uploadFile.size > DIRECT_UPLOAD_LIMIT_BYTES
-        ? await uploadFileInChunks(uploadFile, text)
-        : await uploadDirectly(uploadFile, text);
+        ? await uploadFileInChunks(uploadFile, text, rightsConfirmed)
+        : await uploadDirectly(uploadFile, text, rightsConfirmed);
       if (!data?.id) {
         setError("質問を送信できませんでした");
         setSubmitting(false);
@@ -51,7 +52,8 @@ export default function CameraUploadCard() {
       {file && <div className="selectedFile"><FileText size={18} /><span>{file.name}</span><button type="button" onClick={() => setFile(null)}>外す</button></div>}
       <label className="fieldLabel">質問を追加する（任意）<textarea className="textArea" rows={5} value={text} onChange={(event) => setText(event.target.value)} placeholder="どこまで分かっているか、どの式で止まったかを書くと説明が合いやすくなります。" /></label>
       {error && <p className="formError">{error}</p>}
-      <button type="button" className="button primaryButton fullButton" disabled={submitting || (!file && !text.trim())} onClick={submit}>{submitting ? "問題を解析中..." : <>質問する <Send size={17} /></>}</button>
+      {file && <><label className="checkLabel uploadConsent"><input type="checkbox" checked={rightsConfirmed} onChange={(e) => setRightsConfirmed(e.target.checked)} /> <span>この資料を送信・解析するために必要な権利または適法な利用根拠があります。未実施試験、流出問題、外部提供禁止資料、市販教材の実質的な複製、第三者の個人情報を含む資料ではありません。</span></label><p className="privacyNote">氏名、学籍番号、メールアドレス、顔写真、採点結果などの個人情報を削除してからアップロードしてください。</p></>}
+      <button type="button" className="button primaryButton fullButton" disabled={submitting || (!file && !text.trim()) || Boolean(file && !rightsConfirmed)} onClick={submit}>{submitting ? "問題を解析中..." : <>質問する <Send size={17} /></>}</button>
       <p className="privacyNote">画像・PDFはあなたの質問履歴にだけ保存されます。最大10MB。</p>
     </div>
   );
@@ -63,17 +65,18 @@ async function prepareUploadFile(file: File) {
   return compressImage(file);
 }
 
-async function uploadDirectly(file: File | null, text: string) {
+async function uploadDirectly(file: File | null, text: string, rightsConfirmed: boolean) {
   const form = new FormData();
   if (file) form.set("file", file);
   form.set("text", text);
+  form.set("rightsConfirmed", String(rightsConfirmed));
   const response = await fetch("/api/questions/upload", { method: "POST", body: form });
   const data = await response.json().catch(() => null);
   if (!response.ok) throw new Error(data?.error ?? uploadErrorMessage(response.status));
   return data;
 }
 
-async function uploadFileInChunks(file: File, text: string) {
+async function uploadFileInChunks(file: File, text: string, rightsConfirmed: boolean) {
   const uploadId = crypto.randomUUID();
   const total = Math.ceil(file.size / CHUNK_BYTES);
   for (let index = 0; index < total; index += 1) {
@@ -82,6 +85,7 @@ async function uploadFileInChunks(file: File, text: string) {
     form.set("uploadId", uploadId);
     form.set("fileName", file.name);
     form.set("text", text);
+    form.set("rightsConfirmed", String(rightsConfirmed));
     form.set("index", String(index));
     form.set("total", String(total));
     form.set("chunk", new File([chunk], `${file.name}.part${index}`, { type: "application/octet-stream" }));

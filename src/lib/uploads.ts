@@ -34,3 +34,16 @@ export function isInsideUploadRoot(filePath: string) {
   const root = path.resolve(uploadRoot()) + path.sep;
   return path.resolve(filePath).startsWith(root);
 }
+
+export async function safeDeleteUpload(filePath: string) {
+  if (!isInsideUploadRoot(filePath)) return "rejected" as const;
+  const root = path.resolve(uploadRoot());
+  const resolved = path.resolve(filePath);
+  const stat = await fs.lstat(resolved).catch(() => null);
+  if (!stat) return "missing" as const;
+  if (stat.isSymbolicLink() || !stat.isFile()) return "rejected" as const;
+  const realPath = await fs.realpath(resolved).catch(() => "");
+  if (!realPath || !realPath.startsWith(`${root}${path.sep}`)) return "rejected" as const;
+  await fs.unlink(resolved);
+  return "deleted" as const;
+}

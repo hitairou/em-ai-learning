@@ -1,0 +1,40 @@
+name: cleanup-expired-uploads
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run only"
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: "30 15 * * *"
+concurrency:
+  group: cleanup-expired-uploads
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    runs-on: [self-hosted, ecorun-esprimo]
+    steps:
+      - name: Verify production container
+        shell: bash
+        env: { CONTAINER_NAME: rebuild-edesign-prod }
+        run: docker inspect "$CONTAINER_NAME" >/dev/null
+      - name: Cleanup expired original uploads
+        shell: bash
+        env:
+          CONTAINER_NAME: rebuild-edesign-prod
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+          if [ "$DRY_RUN" = "true" ]; then RESULT=$(docker exec "$CONTAINER_NAME" node scripts/cleanup-expired-uploads.mjs --dry-run); else RESULT=$(docker exec "$CONTAINER_NAME" node scripts/cleanup-expired-uploads.mjs); fi
+          echo "Cleanup result: $RESULT" >> "$GITHUB_STEP_SUMMARY"
+      - name: Cleanup expired pending registrations
+        shell: bash
+        env:
+          CONTAINER_NAME: rebuild-edesign-prod
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+          if [ "$DRY_RUN" = "true" ]; then RESULT=$(docker exec "$CONTAINER_NAME" node scripts/cleanup-expired-registrations.mjs --dry-run); else RESULT=$(docker exec "$CONTAINER_NAME" node scripts/cleanup-expired-registrations.mjs); fi
+          echo "Registration cleanup result: $RESULT" >> "$GITHUB_STEP_SUMMARY"

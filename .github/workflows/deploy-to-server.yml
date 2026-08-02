@@ -69,6 +69,8 @@ jobs:
           DATABASE_URL: file:../tmp/test.db
           UPLOAD_DIR: ${{ github.workspace }}/tmp/uploads
           OPENAI_API_KEY: ""
+          EMAIL_DELIVERY_MODE: test
+          EMAIL_VERIFICATION_SECRET: ci-only-email-verification-secret-32-characters
         run: npm test
 
       - name: Lint
@@ -81,6 +83,8 @@ jobs:
         env:
           DATABASE_URL: file:../tmp/build.db
           OPENAI_API_KEY: ""
+          EMAIL_DELIVERY_MODE: test
+          EMAIL_VERIFICATION_SECRET: ci-only-email-verification-secret-32-characters
         run: npm run build
 
       - name: Audit production dependencies
@@ -196,6 +200,23 @@ jobs:
           GHCR_FALLBACK_TOKEN: ${{ github.token }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SERVICE_OPERATOR_NAME: ${{ vars.SERVICE_OPERATOR_NAME }}
+          LEGAL_CONTACT_EMAIL: ${{ vars.LEGAL_CONTACT_EMAIL }}
+          UPLOAD_RETENTION_DAYS: ${{ vars.UPLOAD_RETENTION_DAYS || '30' }}
+          MAILGUN_API_KEY: ${{ secrets.MAILGUN_API_KEY }}
+          EMAIL_VERIFICATION_SECRET: ${{ secrets.EMAIL_VERIFICATION_SECRET }}
+          MAILGUN_DOMAIN: ${{ vars.MAILGUN_DOMAIN }}
+          MAILGUN_API_URL: ${{ vars.MAILGUN_API_URL }}
+          EMAIL_FROM_ADDRESS: ${{ vars.EMAIL_FROM_ADDRESS }}
+          EMAIL_FROM_NAME: ${{ vars.EMAIL_FROM_NAME }}
+          EMAIL_REPLY_TO: ${{ vars.EMAIL_REPLY_TO }}
+          EMAIL_DELIVERY_MODE: ${{ vars.EMAIL_DELIVERY_MODE }}
+          EMAIL_CODE_TTL_MINUTES: ${{ vars.EMAIL_CODE_TTL_MINUTES || '10' }}
+          EMAIL_RESEND_COOLDOWN_SECONDS: ${{ vars.EMAIL_RESEND_COOLDOWN_SECONDS || '60' }}
+          EMAIL_MAX_ATTEMPTS: ${{ vars.EMAIL_MAX_ATTEMPTS || '5' }}
+          EMAIL_MAX_SENDS_PER_HOUR: ${{ vars.EMAIL_MAX_SENDS_PER_HOUR || '5' }}
+          MAILGUN_DAILY_SEND_LIMIT: ${{ vars.MAILGUN_DAILY_SEND_LIMIT || '90' }}
+          PENDING_REGISTRATION_TTL_HOURS: ${{ vars.PENDING_REGISTRATION_TTL_HOURS || '24' }}
           ADMIN_BOOTSTRAP_EMAIL: ${{ secrets.ADMIN_BOOTSTRAP_EMAIL }}
           ADMIN_BOOTSTRAP_PASSWORD: ${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}
           ADMIN_BOOTSTRAP_NAME: ${{ secrets.ADMIN_BOOTSTRAP_NAME }}

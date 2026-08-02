@@ -70,6 +70,7 @@ export async function analyzeQuestion(input: {
     }
     const response = await client.responses.create({
       model: AI_MODEL,
+      store: false,
       input: [{ role: "user", content }],
     });
     return schema.parse(parseAiJson(response.output_text));

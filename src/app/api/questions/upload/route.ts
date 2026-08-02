@@ -13,11 +13,13 @@ export async function POST(request: Request) {
   const form = await request.formData().catch(() => null);
   if (!form) return NextResponse.json({ error: "送信内容を読み取れませんでした" }, { status: 400 });
   const text = String(form.get("text") ?? "").trim().slice(0, 20000);
+  const rightsConfirmed = form.get("rightsConfirmed") === "true";
   const fileValue = form.get("file");
   const file = fileValue instanceof File && fileValue.size > 0 ? fileValue : null;
   if (!text && !file) {
     return NextResponse.json({ error: "画像・PDF・質問文のいずれかを入力してください" }, { status: 400 });
   }
+  if (file && !rightsConfirmed) return NextResponse.json({ error: "アップロード資料の権利確認が必要です" }, { status: 422 });
   try {
     let originalFilePath: string | null = null;
     let imagePath: string | null = null;
@@ -40,6 +42,7 @@ export async function POST(request: Request) {
       originalFilePath,
       imagePath,
       fileName: file?.name,
+      rightsConfirmed,
     });
     return NextResponse.json({ id: session.id }, { status: 201 });
   } catch (error) {

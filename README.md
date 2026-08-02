@@ -50,8 +50,13 @@ Copy-Item .env.example .env
 | `AUTH_SECRET` | 必須 | JWT署名用。32文字以上のランダム値 |
 | `OPENAI_API_KEY` | 任意 | 未設定・APIエラー時は電磁気専用テンプレートへフォールバック |
 | `UPLOAD_DIR` | 任意 | 未設定時は `data/uploads` |
+| `SERVICE_OPERATOR_NAME` | 本番必須 | 規約・プライバシーポリシーに表示する運営者名 |
+| `LEGAL_CONTACT_EMAIL` | 本番必須 | 法務問い合わせ先メールアドレス |
+| `UPLOAD_RETENTION_DAYS` | 任意 | 元ファイルの保存日数（1〜365、標準30日） |
 
 `OPENAI_API_KEY` はサーバー環境だけに設定してください。`NEXT_PUBLIC_` を付けたり、クライアントコードへ渡したりしないでください。
+
+メール認証設定とMailgunのDNS手順は `docs/email-verification-mailgun.md` を参照してください。ローカル・CIでは `EMAIL_DELIVERY_MODE=test`、本番ではMailgunを使用します。`EMAIL_VERIFICATION_SECRET`は`openssl rand -base64 48`で生成し、Secretsへ登録してください。認証メールは初回送信と再送を合算し、UTC日付（UTC 00:00区切り）ごとに `MAILGUN_DAILY_SEND_LIMIT=90` 通までです。上限値は1〜90で、上限到達後はMailgunへ送信しません。
 
 ## seedユーザー
 
@@ -74,6 +79,9 @@ npm run db:generate  # Prisma Client生成
 npm run db:migrate   # 開発migration
 npm run db:deploy    # 本番migration適用
 npm run db:seed      # seed投入
+npm run uploads:cleanup:dry-run # 期限切れ元ファイルの削除対象確認
+npm run uploads:cleanup          # 期限切れ元ファイルを削除
+npm run registrations:cleanup:dry-run # 期限切れ仮登録の削除対象確認
 ```
 
 ## 写真・PDF質問

@@ -10,18 +10,7 @@ export default function GuestStartButton({ variant = "primary" }: { variant?: "p
   async function start() {
     setSubmitting(true);
     setError("");
-    const response = await fetch("/api/auth/guest", {
-      method: "POST",
-      credentials: "include",
-      cache: "no-store",
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      setError(data.error ?? "ゲストモードを開始できませんでした");
-      setSubmitting(false);
-      return;
-    }
-    window.location.assign(typeof data.next === "string" ? data.next : "/onboarding/course");
+    window.location.assign("/legal/consent?guest=1");
   }
 
   return (

@@ -17,6 +17,12 @@ model User {
   learningPurpose     String?
   onboardingCompleted Boolean                   @default(false)
   diagnosticCompleted Boolean                   @default(false)
+  termsAcceptedAt    DateTime?
+  termsVersion       String?
+  privacyAcknowledgedAt DateTime?
+  privacyVersion     String?
+  emailVerifiedAt    DateTime?
+  emailVerificationStatus String                  @default("legacy_exempt")
   createdAt           DateTime                  @default(now())
   updatedAt           DateTime                  @updatedAt
   diagnosticAttempts  DiagnosticAttempt[]
@@ -142,6 +148,10 @@ model QuestionSession {
   course           String
   inputType        String
   originalFilePath String?
+  uploadRightsConfirmedAt DateTime?
+  uploadPolicyVersion String?
+  originalFileDeleteAt DateTime?
+  originalFileDeletedAt DateTime?
   extractedText    String
   detectedTopic    String?
   aiSummary        String?
@@ -151,6 +161,39 @@ model QuestionSession {
   messages         ChatMessage[]
 
   @@index([userId, createdAt])
+  @@index([originalFileDeleteAt, originalFileDeletedAt])
+}
+
+model PendingRegistration {
+  id                       String   @id @default(cuid())
+  email                    String   @unique
+  name                     String
+  passwordHash             String
+  browserTokenHash         String   @unique
+  verificationCodeDigest   String
+  verificationExpiresAt    DateTime
+  verificationAttempts     Int      @default(0)
+  lastSentAt               DateTime?
+  sendWindowStartedAt      DateTime
+  sendCountInWindow        Int      @default(0)
+  expiresAt                DateTime
+  termsAcceptedAt          DateTime
+  termsVersion             String
+  privacyAcknowledgedAt    DateTime
+  privacyVersion           String
+  deliveryStatus           String   @default("pending")
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@index([expiresAt])
+  @@index([verificationExpiresAt])
+}
+
+model EmailDailyQuota {
+  dateKey   String   @id
+  sendCount Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ChatMessage {

@@ -4,6 +4,7 @@ import { analyzeQuestion } from "@/lib/ai/analyzeQuestion";
 import { extractPdfText } from "@/lib/uploads";
 import { ELECTROMAGNETISM_ONLY_MESSAGE, shouldAcceptInitialQuestion } from "@/lib/question-relevance";
 import type { Course, QuestionInputType } from "@/types/learning";
+import { UPLOAD_POLICY_VERSION, getLegalConfig } from "@/lib/legal/config";
 
 type UploadUser = {
   id: string;
@@ -17,7 +18,9 @@ export async function createQuestionSessionFromUpload(input: {
   originalFilePath: string | null;
   imagePath: string | null;
   fileName?: string;
+  rightsConfirmed: boolean;
 }) {
+  if (input.originalFilePath && !input.rightsConfirmed) throw new Error("アップロード資料の権利確認が必要です");
   if (!input.user.selectedCourse) {
     throw new Error("科目を選択してください");
   }
@@ -50,6 +53,10 @@ export async function createQuestionSessionFromUpload(input: {
       course: analysis.course,
       inputType: input.inputType,
       originalFilePath: input.originalFilePath,
+      uploadRightsConfirmedAt: input.originalFilePath ? new Date() : null,
+      uploadPolicyVersion: input.originalFilePath ? UPLOAD_POLICY_VERSION : null,
+      originalFileDeleteAt: input.originalFilePath ? new Date(Date.now() + getLegalConfig().retentionDays * 86400000) : null,
+      originalFileDeletedAt: null,
       extractedText: analysis.extractedText,
       detectedTopic: analysis.topic,
       aiSummary: JSON.stringify(analysis),

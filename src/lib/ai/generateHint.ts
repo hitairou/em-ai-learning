@@ -14,6 +14,7 @@ export async function generateHint(input: { problem: Problem; userAnswer?: strin
   try {
     const response = await client.responses.create({
       model: AI_MODEL,
+      store: false,
       input: [
         "あなたは電磁気学の演習問題の家庭教師です。",
         "答えや途中式の結論は直接出さず、学習者が次に確認すべき観点だけを日本語で1文、50字以内で返してください。",
