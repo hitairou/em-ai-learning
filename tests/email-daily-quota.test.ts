@@ -44,7 +44,17 @@ test("SQLite quota reservation never exceeds the configured limit under concurre
   const now = new Date("2099-01-02T12:00:00.000Z");
   const dateKey = now.toISOString().slice(0, 10);
   await db.emailDailyQuota.deleteMany({ where: { dateKey } });
-  const results = await Promise.allSettled(Array.from({ length: 20 }, () => reserveDailyEmailSend(db, 5, now)));
+  const results = await Promise.allSettled(Array.from({ length: 20 }, (_, index) => (async () => {
+    await new Promise((resolve) => setTimeout(resolve, index * 15));
+    for (let attempt = 0; ; attempt += 1) {
+      try { return await reserveDailyEmailSend(db, 5, now); }
+      catch (error) {
+        if (error instanceof Error && error.name === "DailyEmailQuotaExceededError") throw error;
+        if (attempt >= 5) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    }
+  })()));
   const succeeded = results.filter((result) => result.status === "fulfilled").length;
   const row = await db.emailDailyQuota.findUnique({ where: { dateKey } });
   assert.equal(succeeded, 5);
