@@ -19,6 +19,7 @@ export function getEmailConfig() {
   const maxAttempts = integerEnv("EMAIL_MAX_ATTEMPTS", 5);
   const maxSendsPerHour = integerEnv("EMAIL_MAX_SENDS_PER_HOUR", 5);
   const pendingTtlHours = integerEnv("PENDING_REGISTRATION_TTL_HOURS", 24);
+  const dailySendLimit = integerEnv("MAILGUN_DAILY_SEND_LIMIT", 90);
   if (!emailSchema.safeParse(fromAddress).success || !emailSchema.safeParse(replyTo).success) throw new Error("EMAIL_FROM_ADDRESS and EMAIL_REPLY_TO must be valid email addresses");
   if (!domain || !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)) throw new Error("MAILGUN_DOMAIN must be a valid domain");
   if (!allowedMailgunUrls.includes(apiUrl as typeof allowedMailgunUrls[number])) throw new Error("MAILGUN_API_URL is not allowed");
@@ -26,8 +27,8 @@ export function getEmailConfig() {
   if (verificationSecret.length < 32) throw new Error("EMAIL_VERIFICATION_SECRET must be at least 32 characters");
   if (production && (mode !== "mailgun" || !apiKey)) throw new Error("Production email delivery requires mailgun mode and MAILGUN_API_KEY");
   if (!["mailgun", "test"].includes(mode)) throw new Error("EMAIL_DELIVERY_MODE must be mailgun or test");
-  if (ttlMinutes < 1 || ttlMinutes > 60 || cooldownSeconds < 30 || cooldownSeconds > 3600 || maxAttempts < 3 || maxAttempts > 10 || maxSendsPerHour < 1 || maxSendsPerHour > 20 || pendingTtlHours < 1 || pendingTtlHours > 72) throw new Error("Email verification limits are outside the allowed range");
-  return { mode, apiUrl, domain, fromAddress, fromName, replyTo, apiKey, verificationSecret, ttlMinutes, cooldownSeconds, maxAttempts, maxSendsPerHour, pendingTtlHours };
+  if (ttlMinutes < 1 || ttlMinutes > 60 || cooldownSeconds < 30 || cooldownSeconds > 3600 || maxAttempts < 3 || maxAttempts > 10 || maxSendsPerHour < 1 || maxSendsPerHour > 20 || pendingTtlHours < 1 || pendingTtlHours > 72 || dailySendLimit < 1 || dailySendLimit > 90) throw new Error("Email verification limits are outside the allowed range");
+  return { mode, apiUrl, domain, fromAddress, fromName, replyTo, apiKey, verificationSecret, ttlMinutes, cooldownSeconds, maxAttempts, maxSendsPerHour, pendingTtlHours, dailySendLimit };
 }
 
 function integerEnv(name: string, fallback: number) {

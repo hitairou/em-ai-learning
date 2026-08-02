@@ -34,7 +34,12 @@ gh variable set EMAIL_CODE_TTL_MINUTES --body "10" --repo hitairou/em-ai-learnin
 gh variable set EMAIL_RESEND_COOLDOWN_SECONDS --body "60" --repo hitairou/em-ai-learning
 gh variable set EMAIL_MAX_ATTEMPTS --body "5" --repo hitairou/em-ai-learning
 gh variable set EMAIL_MAX_SENDS_PER_HOUR --body "5" --repo hitairou/em-ai-learning
+gh variable set MAILGUN_DAILY_SEND_LIMIT --body "90" --repo hitairou/em-ai-learning
 gh variable set PENDING_REGISTRATION_TTL_HOURS --body "24" --repo hitairou/em-ai-learning
 ```
 
 本番では`EMAIL_DELIVERY_MODE=mailgun`、CI・ローカルテストでは`EMAIL_DELIVERY_MODE=test`を使います。`support@tairoh.com`の作成済み状態やDNS認証済み状態は、このリポジトリからは確認できません。
+
+## 日次送信上限
+
+初回確認コードと再送コードは、アプリ全体で共通の `MAILGUN_DAILY_SEND_LIMIT` に算入されます。日付キーはUTCの `YYYY-MM-DD` で、UTC 00:00にリセットされます。本番の許容範囲は1〜90です。上限到達時はHTTP 429と次のUTC 00:00までの `Retry-After` を返し、Mailgun APIは呼び出しません。送信に明確に失敗した場合だけ確保枠を1件戻し、結果不明時は無料枠保護のため戻しません。

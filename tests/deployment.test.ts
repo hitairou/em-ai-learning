@@ -94,7 +94,7 @@ test("production deploy raises nginx upload limit for camera and PDF questions",
 test("production deploy validates and forwards email verification settings", async () => {
   const script = await text("scripts/deploy-production.sh");
   const workflow = await text(".github/workflows/deploy-to-server.yml");
-  assert.match(script, /MAILGUN_API_KEY/); assert.match(script, /EMAIL_VERIFICATION_SECRET/); assert.match(script, /MAILGUN_API_URL/); assert.match(script, /EMAIL_DELIVERY_MODE/);
+  assert.match(script, /MAILGUN_API_KEY/); assert.match(script, /EMAIL_VERIFICATION_SECRET/); assert.match(script, /MAILGUN_API_URL/); assert.match(script, /EMAIL_DELIVERY_MODE/); assert.match(script, /MAILGUN_DAILY_SEND_LIMIT/); assert.match(script, /from 1 to 90/);
   assert.match(script, /MAILGUN_API_KEY="\$\{MAILGUN_API_KEY:-\}"/); assert.match(script, /EMAIL_DELIVERY_MODE.*mailgun/);
-  assert.match(workflow, /secrets\.MAILGUN_API_KEY/); assert.match(workflow, /secrets\.EMAIL_VERIFICATION_SECRET/); assert.match(workflow, /vars\.MAILGUN_DOMAIN/);
+  assert.match(workflow, /secrets\.MAILGUN_API_KEY/); assert.match(workflow, /secrets\.EMAIL_VERIFICATION_SECRET/); assert.match(workflow, /vars\.MAILGUN_DOMAIN/); assert.match(workflow, /vars\.MAILGUN_DAILY_SEND_LIMIT/);
 });

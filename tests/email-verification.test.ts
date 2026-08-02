@@ -17,5 +17,6 @@ test("Mailgun verification messages disable tracking and do not include a verifi
   const sender = await source("src/lib/email/send-verification-code.ts");
   const template = await source("src/lib/email/templates/verification-code.ts");
   assert.match(sender, /o:tracking/); assert.match(sender, /o:tracking-clicks/); assert.match(sender, /o:tracking-opens/);
+  assert.match(sender, /isDefinitiveEmailDeliveryFailure/);
   assert.match(template, /確認コード/); assert.match(template, /有効期限/); assert.doesNotMatch(template, /http:\/\/|https:\/\//);
 });

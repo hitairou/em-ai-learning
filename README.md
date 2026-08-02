@@ -56,7 +56,7 @@ Copy-Item .env.example .env
 
 `OPENAI_API_KEY` はサーバー環境だけに設定してください。`NEXT_PUBLIC_` を付けたり、クライアントコードへ渡したりしないでください。
 
-メール認証設定とMailgunのDNS手順は `docs/email-verification-mailgun.md` を参照してください。ローカル・CIでは `EMAIL_DELIVERY_MODE=test`、本番ではMailgunを使用します。`EMAIL_VERIFICATION_SECRET`は`openssl rand -base64 48`で生成し、Secretsへ登録してください。
+メール認証設定とMailgunのDNS手順は `docs/email-verification-mailgun.md` を参照してください。ローカル・CIでは `EMAIL_DELIVERY_MODE=test`、本番ではMailgunを使用します。`EMAIL_VERIFICATION_SECRET`は`openssl rand -base64 48`で生成し、Secretsへ登録してください。認証メールは初回送信と再送を合算し、UTC日付（UTC 00:00区切り）ごとに `MAILGUN_DAILY_SEND_LIMIT=90` 通までです。上限値は1〜90で、上限到達後はMailgunへ送信しません。
 
 ## seedユーザー
 
