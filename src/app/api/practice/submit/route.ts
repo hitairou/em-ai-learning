@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { gradeAnswer } from "@/lib/ai/gradeAnswer";
 import { gradeImageAnswer } from "@/lib/ai/gradeImageAnswer";
 import { getCurrentDiagnosticScore } from "@/lib/diagnostic-score";
+import { gradeDeterministically } from "@/lib/grading";
 import { findSimilarProblem } from "@/lib/problem-bank";
 import { publishedProblemWhere } from "@/lib/problem-policy";
 import { toProblemView } from "@/lib/problems";
@@ -51,7 +52,9 @@ export async function POST(request: Request) {
 
   const grade = imageFile
     ? await gradeImageAnswer(problem, imageFile, parsed.data.userAnswer === "画像回答" ? undefined : parsed.data.userAnswer)
-    : await gradeAnswer(problem, parsed.data.userAnswer);
+    : problem.answerKind === "choice"
+      ? gradeDeterministically(problem, parsed.data.userAnswer)
+      : await gradeAnswer(problem, parsed.data.userAnswer);
   if (grade.status === "pending") {
     return NextResponse.json({ grade, retryable: true }, { status: 202 });
   }
