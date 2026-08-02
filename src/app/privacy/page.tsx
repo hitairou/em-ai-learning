@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import LegalFooter from "@/components/LegalFooter";
 import { PRIVACY_VERSION, getLegalConfig } from "@/lib/legal/config";
+import LegalBackButton from "@/components/LegalBackButton";
 
 export const metadata: Metadata = { title: "プライバシーポリシー", description: "EM PASSのプライバシーポリシー" };
-export default function PrivacyPage() {
+export default async function PrivacyPage({ searchParams }: { searchParams: Promise<{ returnTo?: string }> }) {
   const legal = getLegalConfig();
-  return <div className="legalPage"><span className="eyebrow">PRIVACY POLICY</span><h1>プライバシーポリシー</h1><div className="legalBody">
+  await searchParams;
+  return <div className="legalPage"><LegalBackButton /><span className="eyebrow">PRIVACY POLICY</span><h1>プライバシーポリシー</h1><div className="legalBody">
     <h2>メール認証</h2><p>メール認証のため、メールアドレス、認証コード送信日時、認証日時、失敗回数を処理します。Mailgunへメールアドレスと認証メール本文を送信します。認証メールでは開封追跡・クリック追跡を使用しません。未認証の仮登録情報は標準24時間で削除します。</p>
     <p>制定日・改定日：2026年8月2日 / バージョン：{PRIVACY_VERSION}</p>
     <h2>取得する情報</h2><p>ユーザー名、メールアドレス、認証情報のハッシュ、選択科目・学習目的、診断・演習の回答、正誤・回答時間・ヒント利用回数・誤答分類、質問内容、アップロード画像・PDF、抽出テキスト、AI解析結果・採点結果・解説・類題、Cookie・セッション情報、セキュリティ・障害対応に必要なログを取得します。</p>
