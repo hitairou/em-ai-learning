@@ -26,6 +26,7 @@ export async function reserveDailyEmailSend(db: DbClient, limit: number, now = n
   for (let attempt = 0; ; attempt += 1) {
     try {
       await db.$transaction(async (tx) => {
+        await tx.$executeRawUnsafe('INSERT OR IGNORE INTO "EmailDailyQuota" ("dateKey", "sendCount", "createdAt", "updatedAt") VALUES (?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)', dateKey);
         await tx.emailDailyQuota.upsert({ where: { dateKey }, create: { dateKey }, update: {} });
         const reserved = await tx.emailDailyQuota.updateMany({
           where: { dateKey, sendCount: { lt: limit } },
