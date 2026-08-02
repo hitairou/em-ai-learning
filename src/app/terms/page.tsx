@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import LegalFooter from "@/components/LegalFooter";
 import { TERMS_VERSION, UPLOAD_POLICY_VERSION, getLegalConfig } from "@/lib/legal/config";
+import LegalBackButton from "@/components/LegalBackButton";
 
 export const metadata: Metadata = { title: "利用規約", description: "EM PASSの利用規約" };
-export default function TermsPage() {
+export default async function TermsPage({ searchParams }: { searchParams: Promise<{ returnTo?: string }> }) {
   const legal = getLegalConfig();
+  await searchParams;
   return <LegalDocument title="利用規約" eyebrow="TERMS OF USE">
     <p>制定日・改定日：2026年8月2日 / 規約バージョン：{TERMS_VERSION}</p>
     <h2>1. サービスの目的</h2><p>EM PASSは、大学レベルの電磁気学1・2を学ぶ利用者向けの独立した学習支援サービスです。特定の大学、学部、教員、教育機関による公式・公認・監修サービスではありません。</p>
@@ -21,5 +23,5 @@ export default function TermsPage() {
 }
 
 function LegalDocument({ title, eyebrow, children }: { title: string; eyebrow: string; children: React.ReactNode }) {
-  return <div className="legalPage"><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><div className="legalBody">{children}</div></div>;
+  return <div className="legalPage"><LegalBackButton /><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><div className="legalBody">{children}</div></div>;
 }

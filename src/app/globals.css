@@ -16,6 +16,8 @@
   --shadow: 0 18px 55px rgba(16, 42, 44, 0.1);
 }
 
+.legalBackButton { min-height: 44px; margin: 0 0 24px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 10px; color: var(--teal); background: var(--surface); cursor: pointer; font: inherit; }
+
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body { margin: 0; color: var(--ink); background: var(--paper); font-family: "DM Sans", "Noto Sans JP", sans-serif; -webkit-font-smoothing: antialiased; }
