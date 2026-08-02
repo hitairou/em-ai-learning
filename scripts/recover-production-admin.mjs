@@ -18,25 +18,28 @@ const prisma = new PrismaClient();
 try {
   const result = await prisma.$transaction(async (tx) => {
     const matches = await tx.$queryRaw(Prisma.sql`SELECT id, email, role FROM "User" WHERE LOWER(TRIM(email)) = ${input.email} LIMIT 2`);
-    if (matches.length > 0) throw new Error("Refusing recovery: an account already exists for this email");
-
+    if (matches.length > 1) throw new Error("Refusing recovery: the email matches multiple accounts");
+    const passwordHash = await bcrypt.hash(input.password, 12);
+    const data = {
+      passwordHash,
+      role: "admin",
+      termsAcceptedAt: new Date(),
+      termsVersion: "2026-08-02",
+      privacyAcknowledgedAt: new Date(),
+      privacyVersion: "2026-08-02",
+      emailVerificationStatus: "system",
+    };
+    if (matches.length === 1) {
+      const user = await tx.user.update({ where: { id: matches[0].id }, data, select: { id: true, email: true, role: true, emailVerificationStatus: true } });
+      return { action: "promoted", ...user };
+    }
     const user = await tx.user.create({
-      data: {
-        name: input.name,
-        email: input.email,
-        passwordHash: await bcrypt.hash(input.password, 12),
-        role: "admin",
-        termsAcceptedAt: new Date(),
-        termsVersion: "2026-08-02",
-        privacyAcknowledgedAt: new Date(),
-        privacyVersion: "2026-08-02",
-        emailVerificationStatus: "system",
-      },
+      data: { name: input.name, email: input.email, ...data },
       select: { id: true, email: true, role: true, emailVerificationStatus: true },
     });
-    return user;
+    return { action: "created", ...user };
   });
-  console.log(JSON.stringify({ created: true, id: result.id, email: mask(result.email), role: result.role, emailVerificationStatus: result.emailVerificationStatus }));
+  console.log(JSON.stringify({ action: result.action, id: result.id, email: mask(result.email), role: result.role, emailVerificationStatus: result.emailVerificationStatus }));
 } catch (error) {
   console.error("Administrator recovery failed without exposing credentials.");
   console.error(error instanceof Error ? error.message : "Unknown error");
