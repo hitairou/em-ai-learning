@@ -15,6 +15,7 @@ test("daily email quota uses UTC rows, atomic conditional updates, and safe rele
   assert.match(helper, /sendCount: \{ lt: limit \}/);
   assert.match(helper, /sendCount: \{ gt: 0 \}/);
   assert.match(helper, /DailyEmailQuotaExceededError/);
+  assert.match(helper, /isRetryableSqliteConflict/);
 });
 
 test("daily quota is shared by signup and resend and is fail-closed at 90", async () => {
