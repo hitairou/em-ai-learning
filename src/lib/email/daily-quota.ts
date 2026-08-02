@@ -54,5 +54,5 @@ function isRetryableSqliteConflict(error: unknown) {
   if (!error || typeof error !== "object") return false;
   const candidate = error as { code?: unknown; message?: unknown };
   const message = String(candidate.message ?? "").toLowerCase();
-  return candidate.code === "P2028" || candidate.code === "P2034" || message.includes("database is locked") || message.includes("write conflict");
+  return candidate.code === "P2002" || candidate.code === "P2028" || candidate.code === "P2034" || message.includes("database is locked") || message.includes("write conflict");
 }
