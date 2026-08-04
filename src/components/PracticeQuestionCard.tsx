@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Camera } from "lucide-react";
+import { ArrowLeft, Camera } from "lucide-react";
 import AnswerInput from "@/components/AnswerInput";
 import AiFeedbackPanel from "@/components/AiFeedbackPanel";
 import RichMathText from "@/components/RichMathText";
@@ -88,8 +88,10 @@ export default function PracticeQuestionCard({ problem }: { problem: ProblemView
 
   return (
     <div className="stackLarge">
+      <Link className="questionBackLink" href="/practice"><ArrowLeft size={17} />演習に戻る</Link>
       <article className="questionCard practiceQuestion">
         <div className="todayCardMeta"><span>{problem.unit} / {problem.topic}</span><span>難易度 {problem.difficulty}</span></div>
+        <span className="questionIdLabel">{problem.appQuestionId ? `問題ID ${problem.appQuestionId}` : ""}</span>
         <h1>{problem.title}</h1>
         <RichMathText className="questionBody" text={problem.questionText} />
         <AnswerInput choices={problem.choices} value={answer} onChange={setAnswer} />

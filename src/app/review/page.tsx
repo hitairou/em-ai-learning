@@ -1,4 +1,5 @@
 import ReviewHub, { type ReviewHistoryEntry, type ReviewProblemItem } from "@/components/ReviewHub";
+import ProblemSearchButton from "@/components/ProblemSearchButton";
 import { requireCompletedUser } from "@/lib/auth/user";
 import { MISTAKE_LABELS } from "@/lib/constants";
 import { db } from "@/lib/db";
@@ -134,7 +135,7 @@ export default async function ReviewPage() {
     <div className="contentPage">
       <div className="pageHeader">
         <span className="eyebrow">REVIEW & LOG</span>
-        <h1>復習と学習履歴</h1>
+        <div className="pageTitleWithAction"><h1>復習と学習履歴</h1><ProblemSearchButton /></div>
         <p>診断と演習の履歴をまとめて、種別・単元・誤答有無で切り替えます。</p>
       </div>
       <ReviewHub items={reviewItems} units={units} />

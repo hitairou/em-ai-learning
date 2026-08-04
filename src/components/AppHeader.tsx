@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, ShieldCheck } from "lucide-react";
 import HeaderCourseSwitcher from "@/components/HeaderCourseSwitcher";
+import HeaderMenu from "@/components/HeaderMenu";
 import type { Course } from "@/types/learning";
 
 interface HeaderUser {
@@ -47,12 +48,14 @@ export default function AppHeader({ user }: { user: HeaderUser | null }) {
               )}
             </nav>
             <span className="headerUser">{user.name}</span>
+            <HeaderMenu />
             <Link className="iconButton" href="/logout" aria-label="ログアウト">
               <LogOut size={18} />
             </Link>
           </div>
         ) : (
           <div className="authLinks">
+            <HeaderMenu />
             <Link href="/login">ログイン</Link>
             <Link className="button smallButton" href="/signup">無料で始める</Link>
           </div>

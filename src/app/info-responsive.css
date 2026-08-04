@@ -1,0 +1,45 @@
+.headerMenu { position: relative; }.headerMenuButton { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--ink); background: var(--surface); cursor: pointer; }.headerMenuButton:hover { color: var(--teal); border-color: var(--teal); }.headerMenuPanel { width: 255px; padding: 8px; position: absolute; top: 48px; right: 0; z-index: 80; display: grid; gap: 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 18px 40px rgba(16,42,44,.16); }.headerMenuPanel a { min-height: 58px; padding: 9px 10px; display: flex; align-items: center; gap: 10px; border-radius: 8px; color: var(--teal); }.headerMenuPanel a:hover { background: #edf7f2; }.headerMenuPanel a > span { display: grid; gap: 2px; }.headerMenuPanel strong { color: var(--ink); font-size: 12px; }.headerMenuPanel small { color: var(--muted); font-size: 10px; }
+.landingInfoLinks { max-width: 1180px; margin: 0 auto; padding: 100px 28px; display: grid; grid-template-columns: .9fr 1.1fr; align-items: center; gap: 70px; }.landingInfoLinks h2 { margin: 0; font-size: clamp(28px, 4vw, 46px); line-height: 1.15; }.landingInfoLinks p { max-width: 440px; margin: 20px 0 0; color: var(--muted); line-height: 1.8; }.landingInfoLinkGrid { display: grid; gap: 10px; }.landingInfoLinkCard { min-height: 126px; padding: 21px; display: flex; align-items: center; gap: 15px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); transition: transform .2s ease, box-shadow .2s ease; }.landingInfoLinkCard:hover { transform: translateX(6px); box-shadow: 0 17px 32px rgba(16,42,44,.1); }.landingInfoLinkCard > span:nth-child(2) { min-width: 0; display: grid; gap: 8px; flex: 1; }.landingInfoLinkCard strong { font-size: 17px; }.landingInfoLinkCard small { color: var(--muted); line-height: 1.6; }.landingInfoLinkCard > svg { color: var(--teal); }.landingInfoLinkIcon { width: 48px; height: 48px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 14px 5px 14px 5px; color: white; background: var(--teal); }.landingInfoLinkIcon.developmentIcon { color: var(--ink); background: var(--lime); }
+.screenDetailInfoGrid { max-width: 700px; margin-top: 26px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }.screenDetailInfoGrid > div { padding: 16px; border-radius: 11px; background: #edf7f2; }.screenDetailInfoGrid span { color: var(--teal); font-size: 11px; font-weight: 800; }.screenDetailInfoGrid p { margin: 8px 0 0; color: var(--ink-2); font-size: 12px; line-height: 1.7; }.screenTips { max-width: 700px; margin-top: 20px; padding: 16px; border-left: 4px solid var(--lime); background: #f7f8e8; }.screenTips > strong { display: block; margin-bottom: 9px; color: var(--teal-dark); font-size: 12px; }.screenTips p { margin: 7px 0 0; display: flex; align-items: flex-start; gap: 7px; color: var(--ink-2); font-size: 12px; line-height: 1.65; }.screenTips p svg { flex: 0 0 auto; margin-top: 2px; color: var(--teal); }
+.infoAppLink { width: fit-content; margin: 22px max(28px, calc((100% - 1180px) / 2 + 28px)) 0; padding: 8px 12px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--teal); background: rgba(255,253,248,.72); font-size: 12px; font-weight: 700; }.infoAppLink:hover { border-color: var(--teal); background: #edf7f2; }
+
+@media (max-width: 1040px) {
+  .infoHero { grid-template-columns: 1fr; gap: 36px; }
+  .landingInfoLinks { grid-template-columns: 1fr; gap: 35px; }
+  .guideOrbitVisual { width: min(380px, 100%); }
+  .guidePrincipleSection, .guideDetailTeaser, .setupTimeline { grid-template-columns: 1fr; gap: 34px; }
+  .screenGuideWorkspace, .developmentWorkspace { grid-template-columns: 1fr; }
+  .screenGuideTabs, .chapterTabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; overflow: visible; padding-bottom: 4px; }
+  .screenGuideTabs button, .chapterTabs button { min-width: 0; width: 100%; }
+  .screenGuideTabs button svg:last-child { display: none; }
+}
+
+@media (max-width: 720px) {
+  .infoHero, .infoSubHero, .infoSection, .architectureSection, .developmentWorkspace, .setupTimeline, .screenFlow { width: calc(100% - 32px); }
+  .infoHero { padding: 52px 0 70px; }
+  .landingInfoLinks { width: calc(100% - 32px); padding: 70px 0; grid-template-columns: 1fr; gap: 28px; }
+  .infoHero h1, .infoSubHero h1 { font-size: 42px; }
+  .infoHeroCopy > p, .infoSubHero > p { font-size: 15px; }
+  .guideOrbitVisual { width: min(350px, 100%); }
+  .infoSection { padding: 70px 0; }
+  .infoSectionHeading { align-items: flex-start; flex-direction: column; }
+  .guideStepsGrid, .principleTabs { grid-template-columns: 1fr; }
+  .principleTabs button { min-height: 48px; }
+  .screenDetailCard { min-height: 0; padding: 24px 19px; }
+  .screenDetailInfoGrid { grid-template-columns: 1fr; }
+  .screenActionList { grid-template-columns: 1fr; }
+  .screenActionList div { min-height: 72px; }
+  .screenFlow { padding: 80px 0; }
+  .screenFlowLine { flex-direction: column; align-items: stretch; }
+  .screenFlowNode svg { margin-left: auto; transform: rotate(90deg); }
+  .architectureFlow { grid-template-columns: 1fr 1fr; }
+  .architectureArrow { display: none; }
+  .chapterDetail { padding: 25px 19px; }
+  .developmentHeroBadges { gap: 6px; }
+  .developmentHeroBadges span { font-size: 10px; }
+  .timelineSteps > div { grid-template-columns: 25px 22px 1fr; }
+  .timelineSteps small { grid-column: 3; }
+}
+
+.infoPage h1, .infoPage h2, .infoPage h3 { word-break: keep-all; overflow-wrap: normal; }
+.infoPage p, .infoPage small { word-break: normal; overflow-wrap: break-word; }

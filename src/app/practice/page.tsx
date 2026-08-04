@@ -1,4 +1,5 @@
 import PracticeHub from "@/components/PracticeHub";
+import ProblemSearchButton from "@/components/ProblemSearchButton";
 import { requireCompletedUser } from "@/lib/auth/user";
 import { findPracticeRecommendations, findPracticeUnitOptions } from "@/lib/problem-bank";
 import { toProblemView } from "@/lib/problems";
@@ -22,7 +23,7 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
     <div className="contentPage">
       <div className="pageHeader">
         <span className="eyebrow">ADAPTIVE PRACTICE</span>
-        <h1>演習</h1>
+        <div className="pageTitleWithAction"><h1>演習</h1><ProblemSearchButton /></div>
         <p>モードを選ぶと、苦手と履歴に合わせて候補を並べます。</p>
       </div>
       <PracticeHub initialMode={mode} initialSelectedUnits={initialUnits} initialProblems={recommendations.map((item) => ({

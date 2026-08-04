@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Camera, CheckCircle2, Route, Sparkles } from "lucide-react";
 import GuestStartButton from "@/components/GuestStartButton";
+import LandingInfoLinks from "@/components/LandingInfoLinks";
 
 export default function LandingPage() {
   return (
@@ -21,6 +22,7 @@ export default function LandingPage() {
         </div>
       </section>
       <section className="featureBand"><article><Camera /><span>01</span><h2>撮って質問</h2><p>問題用紙や課題を撮影。使う法則と考え方から解説します。</p></article><article><Route /><span>02</span><h2>弱点を診断</h2><p>符号・対称性・公式選択まで、間違えた理由を分類します。</p></article><article><Sparkles /><span>03</span><h2>次の1問へ</h2><p>履歴から今日の優先問題と類題を選び、復習へつなげます。</p></article></section>
+      <LandingInfoLinks />
       <section className="landingCta"><span className="eyebrow">基礎から合格ラインへ</span><h2>何から始めるかは、診断に任せる。</h2><Link className="button lightButton" href="/signup">アカウントを作成して始める <ArrowRight size={18} /></Link><div className="landingGuestCta"><GuestStartButton variant="subtle" /></div></section>
     </div>
   );
