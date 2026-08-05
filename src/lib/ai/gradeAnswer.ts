@@ -6,7 +6,7 @@ import { gradeAnswerPrompt } from "@/lib/ai/prompts/grade-answer";
 import { parseAiJson } from "@/lib/ai/helpers";
 import { MISTAKE_TYPES, type GradeResult } from "@/types/learning";
 import { parseJson } from "@/lib/json";
-import { pendingDerivationGrade } from "@/lib/grading";
+import { gradeDeterministically, pendingDerivationGrade } from "@/lib/grading";
 
 const schema = z.object({
   isCorrect: z.boolean(),
@@ -20,6 +20,10 @@ const schema = z.object({
 
 export async function gradeAnswer(problem: Problem, userAnswer: string): Promise<GradeResult> {
   if (problem.answerKind === "choice") throw new Error("Choice answers must use deterministic grading.");
+  if (problem.answerKind === "numeric") {
+    const numericGrade = gradeDeterministically(problem, userAnswer);
+    if (numericGrade.isCorrect) return numericGrade;
+  }
   const client = getAiClient();
   if (!client) return pendingDerivationGrade(problem.topic);
   try {

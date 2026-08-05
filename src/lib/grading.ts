@@ -124,7 +124,8 @@ function expectedUnits(value: string) {
 function numericTolerance(problem: GradeableProblem) {
   const metadata = parseJson<Record<string, unknown>>(problem.internalMetadataJson, {});
   return {
-    relative: typeof metadata.relativeTolerance === "number" ? metadata.relativeTolerance : 0.01,
+    // Three significant figures can differ from the stored value by just under 0.5%.
+    relative: Math.max(typeof metadata.relativeTolerance === "number" ? metadata.relativeTolerance : 0.01, 0.005),
     absolute: typeof metadata.absoluteTolerance === "number" ? metadata.absoluteTolerance : 1e-9,
   };
 }

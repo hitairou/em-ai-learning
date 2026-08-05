@@ -40,6 +40,12 @@ test("numeric grading applies tolerance and units", () => {
   assert.equal(gradeDeterministically(target, "13 V").isCorrect, false);
 });
 
+test("numeric grading accepts a three-significant-figure rounded answer", () => {
+  const target = problem({ answerKind: "numeric", correctAnswer: "\\(1.234\\,\\mathrm{V}\\)", internalMetadataJson: JSON.stringify({ relativeTolerance: 0.001 }) });
+  assert.equal(gradeDeterministically(target, "1.23 V").isCorrect, true);
+  assert.equal(gradeDeterministically(target, "1.24 V").isCorrect, true);
+});
+
 test("short text grading normalizes width, punctuation, and whitespace", () => {
   const target = problem({ answerKind: "short_text", correctAnswer: "ガウスの法則" });
   assert.equal(gradeDeterministically(target, "ガウスの法則。 ").isCorrect, true);
