@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, Code2, HelpCircle, Menu, X } from "lucide-react";
+import { BookOpen, Code2, HelpCircle, Menu, Presentation, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 const links = [
+  { href: "/guide/slideshow", label: "EM PASS紹介スライド", description: "アプリの全体像を短時間で見る", icon: Presentation },
   { href: "/guide", label: "使い方ガイド", description: "まずはここから", icon: HelpCircle },
   { href: "/guide/screens", label: "画面別ガイド", description: "機能をくわしく見る", icon: BookOpen },
   { href: "/development", label: "仕組み・開発", description: "アプリの中身を知る", icon: Code2 },
