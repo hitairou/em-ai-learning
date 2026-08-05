@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { contradictoryDerivationGrade, gradeDeterministically, pendingDerivationGrade, type GradeableProblem } from "../src/lib/grading";
+import { contradictoryDerivationGrade, finalNumericAnswerMatches, gradeDeterministically, pendingDerivationGrade, type GradeableProblem } from "../src/lib/grading";
 
 function problem(overrides: Partial<GradeableProblem>): GradeableProblem {
   return {
@@ -44,6 +44,16 @@ test("numeric grading accepts a three-significant-figure rounded answer", () => 
   const target = problem({ answerKind: "numeric", correctAnswer: "\\(1.234\\,\\mathrm{V}\\)", internalMetadataJson: JSON.stringify({ relativeTolerance: 0.001 }) });
   assert.equal(gradeDeterministically(target, "1.23 V").isCorrect, true);
   assert.equal(gradeDeterministically(target, "1.24 V").isCorrect, true);
+});
+
+test("derivation grading recognizes rounded final numeric values", () => {
+  const target = problem({
+    answerKind: "derivation",
+    correctAnswer: "C = 1.33518e-11 F, V = 224.689 V, E = 1872.41 V/m, U = 3.37303e-7 J",
+    internalMetadataJson: "{}",
+  });
+  assert.equal(finalNumericAnswerMatches(target, "途中式 12.0 cm、3.00 nC。C = 1.34e-11 F, V = 225 V, E = 1.87e3 V/m, U = 3.37e-7 J"), true);
+  assert.equal(finalNumericAnswerMatches(target, "C = 1.50e-11 F, V = 225 V, E = 1.87e3 V/m, U = 3.37e-7 J"), false);
 });
 
 test("short text grading normalizes width, punctuation, and whitespace", () => {

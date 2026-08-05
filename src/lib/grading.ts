@@ -126,8 +126,30 @@ function numericTolerance(problem: GradeableProblem) {
   return {
     // Three significant figures can differ from the stored value by just under 0.5%.
     relative: Math.max(typeof metadata.relativeTolerance === "number" ? metadata.relativeTolerance : 0.01, 0.005),
-    absolute: typeof metadata.absoluteTolerance === "number" ? metadata.absoluteTolerance : 1e-9,
+    absolute: typeof metadata.absoluteTolerance === "number" ? metadata.absoluteTolerance : 0,
   };
+}
+
+function numericValuesMatch(expected: number[], actual: number[], relativeTolerance: number, absoluteTolerance = 0) {
+  if (expected.length === 0 || actual.length < expected.length) return false;
+  const candidate = actual.slice(-expected.length);
+  return expected.every((target, index) => {
+    const allowed = Math.max(absoluteTolerance, Math.abs(target) * relativeTolerance);
+    return Math.abs(candidate[index] - target) <= allowed;
+  });
+}
+
+/** Compare the final numeric sequence so rounded derivation answers are accepted. */
+export function finalNumericAnswerMatches(problem: GradeableProblem, userAnswer: string) {
+  const expected = numbers(problem.correctAnswer);
+  const actual = numbers(userAnswer);
+  const tolerance = numericTolerance(problem);
+  if (!numericValuesMatch(expected, actual, tolerance.relative, tolerance.absolute)) return false;
+
+  const expectedUnitsList = expectedUnits(problem.correctAnswer);
+  if (expectedUnitsList.length === 0) return true;
+  const finalText = userAnswer.normalize("NFKC").toLowerCase().slice(-1200).replace(/\\(?:mathrm|text)\{([^}]*)\}/g, "$1");
+  return expectedUnitsList.every((unit) => finalText.includes(unit));
 }
 
 function gradeNumeric(problem: GradeableProblem, userAnswer: string) {
@@ -135,10 +157,7 @@ function gradeNumeric(problem: GradeableProblem, userAnswer: string) {
   const expected = numbers(problem.correctAnswer);
   const actual = numbers(userAnswer);
   const tolerance = numericTolerance(problem);
-  const valuesMatch = expected.length > 0 && expected.length === actual.length && expected.every((target, index) => {
-    const allowed = Math.max(tolerance.absolute, Math.abs(target) * tolerance.relative);
-    return Math.abs(actual[index] - target) <= allowed;
-  });
+  const valuesMatch = numericValuesMatch(expected, actual, tolerance.relative, tolerance.absolute);
   const units = expectedUnits(problem.correctAnswer);
   const normalizedUser = userAnswer.normalize("NFKC").toLowerCase().replace(/\\(?:mathrm|text)\{([^}]*)\}/g, "$1");
   const unitsMatch = units.every((unit) => normalizedUser.includes(unit));
@@ -153,8 +172,7 @@ function gradeShortText(problem: GradeableProblem, userAnswer: string) {
   const actualValues = numbers(userAnswer);
   const units = expectedUnits(problem.correctAnswer);
   const normalizedUser = userAnswer.normalize("NFKC").toLowerCase().replace(/\\(?:mathrm|text)\{([^}]*)\}/g, "$1");
-  const numericMatch = expectedValues.length === 1 && actualValues.length === 1
-    && Math.abs(expectedValues[0] - actualValues[0]) <= Math.max(1e-9, Math.abs(expectedValues[0]) * 0.01)
+  const numericMatch = expectedValues.length === 1 && numericValuesMatch(expectedValues, actualValues, 0.01)
     && units.every((unit) => normalizedUser.includes(unit));
   const isCorrect = textualMatch || numericMatch;
   return result(problem, isCorrect, "concept_error");

@@ -6,7 +6,7 @@ import { gradeAnswerPrompt } from "@/lib/ai/prompts/grade-answer";
 import { parseAiJson } from "@/lib/ai/helpers";
 import { MISTAKE_TYPES, type GradeResult } from "@/types/learning";
 import { parseJson } from "@/lib/json";
-import { gradeDeterministically, pendingDerivationGrade } from "@/lib/grading";
+import { finalNumericAnswerMatches, gradeDeterministically, pendingDerivationGrade } from "@/lib/grading";
 
 const schema = z.object({
   isCorrect: z.boolean(),
@@ -43,7 +43,20 @@ export async function gradeAnswer(problem: Problem, userAnswer: string): Promise
       store: false,
       input: `${gradeAnswerPrompt()}\n保存済み採点基準:\n${JSON.stringify(rubric)}`,
     });
-    return { status: "completed", ...schema.parse(parseAiJson(response.output_text)) };
+    const aiGrade = schema.parse(parseAiJson(response.output_text));
+    if (!aiGrade.isCorrect && aiGrade.mistakeType === "calculation_error" && finalNumericAnswerMatches(problem, userAnswer)) {
+      return {
+        status: "completed",
+        isCorrect: true,
+        score: 100,
+        mistakeType: "correct",
+        lawSelection: aiGrade.lawSelection,
+        correction: "数値は丸め誤差の範囲内です。正答として扱います。",
+        explanation: aiGrade.explanation,
+        nextStep: aiGrade.nextStep,
+      };
+    }
+    return { status: "completed", ...aiGrade };
   } catch {
     return pendingDerivationGrade(problem.topic);
   }
