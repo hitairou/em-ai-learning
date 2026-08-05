@@ -56,6 +56,12 @@ test("derivation grading recognizes rounded final numeric values", () => {
   assert.equal(finalNumericAnswerMatches(target, "C = 1.50e-11 F, V = 225 V, E = 1.87e3 V/m, U = 3.37e-7 J"), false);
 });
 
+test("numeric grading accepts equivalent prefixed units", () => {
+  const target = problem({ answerKind: "numeric", correctAnswer: "1.33518e-11 F", internalMetadataJson: "{}" });
+  assert.equal(gradeDeterministically(target, "13.4 pF").isCorrect, true);
+  assert.equal(gradeDeterministically(target, "13.4 nF").isCorrect, false);
+});
+
 test("short text grading normalizes width, punctuation, and whitespace", () => {
   const target = problem({ answerKind: "short_text", correctAnswer: "ガウスの法則" });
   assert.equal(gradeDeterministically(target, "ガウスの法則。 ").isCorrect, true);

@@ -121,6 +121,32 @@ function expectedUnits(value: string) {
   return knownUnits.filter((unit) => new RegExp(`(^|[^a-z])${unit.replace("/", "\\/")}([^a-z]|$)`, "i").test(normalized));
 }
 
+type Quantity = { value: number; unit: string };
+
+function normalizedQuantities(value: string): Quantity[] {
+  const normalized = latexScientificNotation(value)
+    .normalize("NFKC")
+    .replace(/\\(?:mathrm|text)\{([^}]*)\}/g, "$1")
+    .replace(/\\,/g, "");
+  const unitPattern = "a/m|v/m|c/m|n/c|w/m|hz|[a-z]+";
+  const matches = normalized.matchAll(new RegExp(`([+-]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:e[+-]?\\d+)?)\\s*([pnumkMGμµ]?)(?=(${unitPattern})(?:$|[^a-z]))`, "gi"));
+  const quantities: Quantity[] = [];
+  for (const match of matches) {
+    const prefix = match[2] ?? "";
+    const unit = (match[3] ?? "").toLowerCase();
+    const prefixScale = prefix === "p" ? 1e-12 : prefix === "n" ? 1e-9 : prefix === "µ" || prefix === "μ" ? 1e-6 : prefix === "m" ? 1e-3 : prefix === "k" ? 1e3 : prefix === "M" ? 1e6 : prefix === "G" ? 1e9 : 1;
+    quantities.push({ value: Number(match[1]) * prefixScale, unit });
+  }
+  return quantities;
+}
+
+function quantitiesMatch(expected: Quantity[], actual: Quantity[], relativeTolerance: number, absoluteTolerance: number) {
+  if (expected.length === 0 || actual.length < expected.length) return false;
+  const candidate = actual.slice(-expected.length);
+  return expected.every((target, index) => target.unit === candidate[index].unit
+    && Math.abs(candidate[index].value - target.value) <= Math.max(absoluteTolerance, Math.abs(target.value) * relativeTolerance));
+}
+
 function numericTolerance(problem: GradeableProblem) {
   const metadata = parseJson<Record<string, unknown>>(problem.internalMetadataJson, {});
   return {
@@ -144,7 +170,11 @@ export function finalNumericAnswerMatches(problem: GradeableProblem, userAnswer:
   const expected = numbers(problem.correctAnswer);
   const actual = numbers(userAnswer);
   const tolerance = numericTolerance(problem);
-  if (!numericValuesMatch(expected, actual, tolerance.relative, tolerance.absolute)) return false;
+  const expectedQuantities = normalizedQuantities(problem.correctAnswer);
+  const actualQuantities = normalizedQuantities(userAnswer);
+  if (expectedQuantities.length > 0 && actualQuantities.length >= expectedQuantities.length) {
+    if (!quantitiesMatch(expectedQuantities, actualQuantities, tolerance.relative, tolerance.absolute)) return false;
+  } else if (!numericValuesMatch(expected, actual, tolerance.relative, tolerance.absolute)) return false;
 
   const expectedUnitsList = expectedUnits(problem.correctAnswer);
   if (expectedUnitsList.length === 0) return true;
@@ -157,7 +187,11 @@ function gradeNumeric(problem: GradeableProblem, userAnswer: string) {
   const expected = numbers(problem.correctAnswer);
   const actual = numbers(userAnswer);
   const tolerance = numericTolerance(problem);
-  const valuesMatch = numericValuesMatch(expected, actual, tolerance.relative, tolerance.absolute);
+  const expectedQuantities = normalizedQuantities(problem.correctAnswer);
+  const actualQuantities = normalizedQuantities(userAnswer);
+  const valuesMatch = expectedQuantities.length > 0 && actualQuantities.length >= expectedQuantities.length
+    ? quantitiesMatch(expectedQuantities, actualQuantities, tolerance.relative, tolerance.absolute)
+    : numericValuesMatch(expected, actual, tolerance.relative, tolerance.absolute);
   const units = expectedUnits(problem.correctAnswer);
   const normalizedUser = userAnswer.normalize("NFKC").toLowerCase().replace(/\\(?:mathrm|text)\{([^}]*)\}/g, "$1");
   const unitsMatch = units.every((unit) => normalizedUser.includes(unit));
@@ -170,10 +204,15 @@ function gradeShortText(problem: GradeableProblem, userAnswer: string) {
   const textualMatch = actual === expected || (expected.length >= 4 && actual.includes(expected));
   const expectedValues = numbers(problem.correctAnswer);
   const actualValues = numbers(userAnswer);
+  const tolerance = numericTolerance(problem);
+  const expectedQuantities = normalizedQuantities(problem.correctAnswer);
+  const actualQuantities = normalizedQuantities(userAnswer);
   const units = expectedUnits(problem.correctAnswer);
   const normalizedUser = userAnswer.normalize("NFKC").toLowerCase().replace(/\\(?:mathrm|text)\{([^}]*)\}/g, "$1");
-  const numericMatch = expectedValues.length === 1 && numericValuesMatch(expectedValues, actualValues, 0.01)
-    && units.every((unit) => normalizedUser.includes(unit));
+  const numericMatch = expectedValues.length === 1 && (expectedQuantities.length === 1 && actualQuantities.length >= 1
+    ? quantitiesMatch(expectedQuantities, actualQuantities, tolerance.relative, tolerance.absolute)
+    : numericValuesMatch(expectedValues, actualValues, tolerance.relative, tolerance.absolute))
+    && units.every((unit) => normalizedUser.includes(unit) || actualQuantities.some((quantity) => quantity.unit === unit));
   const isCorrect = textualMatch || numericMatch;
   return result(problem, isCorrect, "concept_error");
 }

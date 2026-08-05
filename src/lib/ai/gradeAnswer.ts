@@ -44,7 +44,7 @@ export async function gradeAnswer(problem: Problem, userAnswer: string): Promise
       input: `${gradeAnswerPrompt()}\n保存済み採点基準:\n${JSON.stringify(rubric)}`,
     });
     const aiGrade = schema.parse(parseAiJson(response.output_text));
-    if (!aiGrade.isCorrect && aiGrade.mistakeType === "calculation_error" && finalNumericAnswerMatches(problem, userAnswer)) {
+    if (!aiGrade.isCorrect && ["calculation_error", "unit_error"].includes(aiGrade.mistakeType) && finalNumericAnswerMatches(problem, userAnswer)) {
       return {
         status: "completed",
         isCorrect: true,
