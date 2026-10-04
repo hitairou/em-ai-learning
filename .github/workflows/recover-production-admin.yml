@@ -1,7 +1,22 @@
 name: recover-production-admin
 
+# Administrator recovery through the root-owned broker `em-prodctl`. The runner
+# has no direct Docker access.
+#
+# Safety: dry-run by default; a real write requires dry_run=false AND
+# confirm=RECOVER_PRODUCTION_ADMIN. The broker re-validates the request.
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview without writing"
+        required: false
+        default: true
+        type: boolean
+      confirm:
+        description: "Set exactly RECOVER_PRODUCTION_ADMIN when dry_run=false"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -10,74 +25,31 @@ jobs:
   recover:
     runs-on: [self-hosted, ecorun-esprimo]
     timeout-minutes: 15
-    env:
-      CONTAINER_NAME: rebuild-edesign-prod
-      DATA_PATH: /srv/rebuild/services/edesign-prod/data
-      ADMIN_RECOVERY_EMAIL: ${{ secrets.ADMIN_RECOVERY_EMAIL }}
-      ADMIN_RECOVERY_PASSWORD: ${{ secrets.ADMIN_RECOVERY_PASSWORD }}
-      ADMIN_RECOVERY_NAME: EM PASS Administrator
     steps:
-      - name: Checkout recovery script
-        uses: actions/checkout@v4
-
-      - name: Backup and create administrator
+      - name: Recover administrator via production broker
         shell: bash
+        env:
+          ADMIN_RECOVERY_EMAIL: ${{ secrets.ADMIN_RECOVERY_EMAIL }}
+          ADMIN_RECOVERY_PASSWORD: ${{ secrets.ADMIN_RECOVERY_PASSWORD }}
+          ADMIN_RECOVERY_NAME: EM PASS Administrator
+          DRY_RUN: ${{ inputs.dry_run }}
+          CONFIRM: ${{ inputs.confirm }}
         run: |
-          set -Eeuo pipefail
-          test -n "$ADMIN_RECOVERY_EMAIL"
-          test -n "$ADMIN_RECOVERY_PASSWORD"
-          IMAGE="$(docker inspect "$CONTAINER_NAME" --format '{{.Config.Image}}')"
-          test -n "$IMAGE"
-          STAMP="$(date -u +%Y%m%d-%H%M%S)"
-          BACKUP_DIR="${HOME}/em-ai-learning-account-recovery/${STAMP}"
-          ARCHIVE="${BACKUP_DIR}/production-data-before-admin-recovery.tar.gz"
-          mkdir -p "$BACKUP_DIR"
-          restarted=0
-          restore_container() {
-            if [ "$restarted" -eq 1 ]; then
-              docker start "$CONTAINER_NAME" >/dev/null
-              for _ in $(seq 1 30); do
-                if curl -fsS --max-time 5 http://127.0.0.1:3010/api/health >/dev/null 2>&1; then
-                  echo "CONTAINER_RESTORE_RESULT status=healthy"
-                  return 0
-                fi
-                sleep 2
-              done
-              echo "CONTAINER_RESTORE_RESULT status=unhealthy" >&2
-              return 1
+          set -euo pipefail
+          ENVF=/run/user/1000/em-recover.env
+          umask 077
+          {
+            printf 'ADMIN_RECOVERY_EMAIL=%s\n' "$ADMIN_RECOVERY_EMAIL"
+            printf 'ADMIN_RECOVERY_PASSWORD=%s\n' "$ADMIN_RECOVERY_PASSWORD"
+            printf 'ADMIN_RECOVERY_NAME=%s\n' "$ADMIN_RECOVERY_NAME"
+          } > "$ENVF"
+          trap 'rm -f "$ENVF"' EXIT
+          if [ "$DRY_RUN" = "true" ]; then
+            sudo -n /usr/local/sbin/em-prodctl recover-production-admin-dry-run
+          else
+            if [ "$CONFIRM" != "RECOVER_PRODUCTION_ADMIN" ]; then
+              echo "Refusing to write: dry_run=false requires confirm=RECOVER_PRODUCTION_ADMIN" >&2
+              exit 1
             fi
-          }
-          trap restore_container EXIT
-          docker stop "$CONTAINER_NAME" >/dev/null
-          restarted=1
-          docker run --rm --user 0:0 \
-            -v "${DATA_PATH}:/data:ro" \
-            -v "${BACKUP_DIR}:/backup" \
-            --entrypoint sh "$IMAGE" \
-            -c "tar -C /data -czf /backup/$(basename "$ARCHIVE") ."
-          test -s "$ARCHIVE"
-          tar -tzf "$ARCHIVE" | grep -qx './prod.db'
-          echo "BACKUP_RESULT status=success archive=$(basename "$ARCHIVE")"
-          docker start "$CONTAINER_NAME" >/dev/null
-          restarted=0
-          # The production data directory may be owned by the image's runtime UID
-          # or by root when it is backed by a bind mount. This is a one-shot,
-          # credential-free maintenance container; keep the app stopped only for
-          # the backup and use root solely for the transactional SQLite update.
-          docker run --rm --user 0:0 \
-            -e DATABASE_URL=file:/data/prod.db \
-            -e ADMIN_RECOVERY_EMAIL \
-            -e ADMIN_RECOVERY_PASSWORD \
-            -e ADMIN_RECOVERY_NAME \
-            -v "${DATA_PATH}:/data" \
-            -v "${GITHUB_WORKSPACE}/scripts/recover-production-admin.mjs:/app/scripts/recover-production-admin.mjs:ro" \
-            "$IMAGE" node scripts/recover-production-admin.mjs
-          for _ in $(seq 1 30); do
-            if curl -fsS --max-time 5 http://127.0.0.1:3010/api/health >/dev/null 2>&1; then
-              echo "POST_RECOVERY_HEALTH status=healthy"
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "POST_RECOVERY_HEALTH status=unhealthy" >&2
-          exit 1
+            sudo -n /usr/local/sbin/em-prodctl recover-production-admin
+          fi

@@ -178,20 +178,7 @@ jobs:
       NEW_IMAGE: ${{ needs.build-amd64.outputs.image }}
       GHCR_USERNAME: ${{ github.repository_owner }}
     steps:
-      - name: Checkout deployment scripts
-        uses: actions/checkout@v4
-
-      - name: Confirm runner and Docker access
-        shell: bash
-        run: |
-          set -euo pipefail
-          docker version >/dev/null
-          test -n "$DATA_PATH"
-          if ! docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
-            echo "Production container ${CONTAINER_NAME} does not exist; deploy will recreate it from ${DATA_PATH}." >&2
-          fi
-
-      - name: Backup, deploy, verify, and rollback on failure
+      - name: Deploy via production broker (no direct docker, no repo script as root)
         env:
           # The workflow token is granted packages:write above and also has
           # read access to the image it just published.  Prefer it over a
@@ -221,7 +208,29 @@ jobs:
           ADMIN_BOOTSTRAP_PASSWORD: ${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}
           ADMIN_BOOTSTRAP_NAME: ${{ secrets.ADMIN_BOOTSTRAP_NAME }}
         shell: bash
-        run: bash scripts/deploy-production.sh
+        run: |
+          set -euo pipefail
+          # Fixed broker input paths (0600, hoge-owned). The broker validates
+          # them with O_NOFOLLOW/fstat and never runs repo code as root.
+          REQ=/run/user/1000/em-deploy-request.json
+          ENVF=/run/user/1000/em-deploy.env
+          umask 077
+          printf '{"image": "%s"}\n' "$NEW_IMAGE" > "$REQ"
+          : > "$ENVF"
+          trap 'rm -f "$REQ" "$ENVF"' EXIT
+          for k in GHCR_READ_TOKEN GHCR_FALLBACK_TOKEN AUTH_SECRET OPENAI_API_KEY \
+            SERVICE_OPERATOR_NAME LEGAL_CONTACT_EMAIL UPLOAD_RETENTION_DAYS \
+            MAILGUN_API_KEY EMAIL_VERIFICATION_SECRET MAILGUN_DOMAIN MAILGUN_API_URL \
+            EMAIL_FROM_ADDRESS EMAIL_FROM_NAME EMAIL_REPLY_TO EMAIL_DELIVERY_MODE \
+            EMAIL_CODE_TTL_MINUTES EMAIL_RESEND_COOLDOWN_SECONDS EMAIL_MAX_ATTEMPTS \
+            EMAIL_MAX_SENDS_PER_HOUR MAILGUN_DAILY_SEND_LIMIT \
+            PENDING_REGISTRATION_TTL_HOURS ADMIN_BOOTSTRAP_EMAIL \
+            ADMIN_BOOTSTRAP_PASSWORD ADMIN_BOOTSTRAP_NAME ; do
+            v="${!k:-}"
+            [ -n "$v" ] && printf '%s=%s\n' "$k" "$v" >> "$ENVF"
+          done
+          sudo -n /usr/local/sbin/em-prodctl prod-deploy
+          rm -f "$REQ" "$ENVF"
 
   public-verify:
     needs: deploy

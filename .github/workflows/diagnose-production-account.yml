@@ -1,5 +1,8 @@
 name: diagnose-production-account
 
+# Read-only production account diagnosis through the root-owned broker
+# `em-prodctl`. The runner has no direct Docker access; the broker runs the
+# root-owned diagnostic script inside the production container read-only.
 on:
   workflow_dispatch:
 
@@ -10,55 +13,15 @@ jobs:
   diagnose:
     runs-on: [self-hosted, ecorun-esprimo]
     timeout-minutes: 15
-    env:
-      CONTAINER_NAME: rebuild-edesign-prod
-      DATA_PATH: /srv/rebuild/services/edesign-prod/data
-      TARGET_LOGIN_EMAIL: ${{ secrets.TARGET_LOGIN_EMAIL }}
     steps:
-      - name: Checkout diagnostic script
-        uses: actions/checkout@v4
-
-      - name: Backup and diagnose production account
+      - name: Diagnose production account via production broker
         shell: bash
+        env:
+          TARGET_LOGIN_EMAIL: ${{ secrets.TARGET_LOGIN_EMAIL }}
         run: |
-          set -Eeuo pipefail
-          IMAGE="$(docker inspect "$CONTAINER_NAME" --format '{{.Config.Image}}')"
-          test -n "$IMAGE"
-          STAMP="$(date -u +%Y%m%d-%H%M%S)"
-          BACKUP_DIR="${HOME}/em-ai-learning-account-diagnostics/${STAMP}"
-          ARCHIVE="${BACKUP_DIR}/production-data-before-account-diagnosis.tar.gz"
-          mkdir -p "$BACKUP_DIR"
-          restarted=0
-          restore_container() {
-            if [ "$restarted" -eq 1 ]; then
-              docker start "$CONTAINER_NAME" >/dev/null
-              for _ in $(seq 1 30); do
-                if curl -fsS --max-time 5 http://127.0.0.1:3010/api/health >/dev/null 2>&1; then
-                  echo "CONTAINER_RESTORE_RESULT status=healthy"
-                  return 0
-                fi
-                sleep 2
-              done
-              echo "CONTAINER_RESTORE_RESULT status=unhealthy" >&2
-              return 1
-            fi
-          }
-          trap restore_container EXIT
-          docker stop "$CONTAINER_NAME" >/dev/null
-          restarted=1
-          docker run --rm --user 0:0 \
-            -v "${DATA_PATH}:/data:ro" \
-            -v "${BACKUP_DIR}:/backup" \
-            --entrypoint sh "$IMAGE" \
-            -c "tar -C /data -czf /backup/$(basename "$ARCHIVE") ."
-          test -s "$ARCHIVE"
-          tar -tzf "$ARCHIVE" | grep -qx './prod.db'
-          echo "BACKUP_RESULT status=success archive=$(basename "$ARCHIVE")"
-          docker start "$CONTAINER_NAME" >/dev/null
-          restarted=0
-          docker run --rm --user 1001:1001 \
-            -e DATABASE_URL=file:/data/prod.db \
-            -e TARGET_LOGIN_EMAIL \
-            -v "${DATA_PATH}:/data:ro" \
-            -v "${GITHUB_WORKSPACE}/scripts/diagnose-production-account.mjs:/app/scripts/diagnose-production-account.mjs:ro" \
-            "$IMAGE" node scripts/diagnose-production-account.mjs
+          set -euo pipefail
+          ENVF=/run/user/1000/em-diagnose.env
+          umask 077
+          printf 'TARGET_LOGIN_EMAIL=%s\n' "${TARGET_LOGIN_EMAIL:-}" > "$ENVF"
+          trap 'rm -f "$ENVF"' EXIT
+          sudo -n /usr/local/sbin/em-prodctl diagnose-production-account

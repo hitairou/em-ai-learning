@@ -1,11 +1,16 @@
 name: cleanup-expired-uploads
+
+# Runs through the root-owned production broker `em-prodctl`; the runner has no
+# direct Docker access. Scheduled runs perform the write cleanup per the
+# production retention policy. Manual dispatch is DRY-RUN ONLY (no arbitrary
+# write from a user input).
 on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Dry run only"
+        description: "Manual dispatch is dry-run only (kept for clarity)"
         required: false
-        default: false
+        default: true
         type: boolean
   schedule:
     - cron: "30 15 * * *"
@@ -16,25 +21,16 @@ jobs:
   cleanup:
     runs-on: [self-hosted, ecorun-esprimo]
     steps:
-      - name: Verify production container
-        shell: bash
-        env: { CONTAINER_NAME: rebuild-edesign-prod }
-        run: docker inspect "$CONTAINER_NAME" >/dev/null
-      - name: Cleanup expired original uploads
+      - name: Cleanup expired uploads and registrations via production broker
         shell: bash
         env:
-          CONTAINER_NAME: rebuild-edesign-prod
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          EVENT: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          if [ "$DRY_RUN" = "true" ]; then RESULT=$(docker exec "$CONTAINER_NAME" node scripts/cleanup-expired-uploads.mjs --dry-run); else RESULT=$(docker exec "$CONTAINER_NAME" node scripts/cleanup-expired-uploads.mjs); fi
-          echo "Cleanup result: $RESULT" >> "$GITHUB_STEP_SUMMARY"
-      - name: Cleanup expired pending registrations
-        shell: bash
-        env:
-          CONTAINER_NAME: rebuild-edesign-prod
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
-        run: |
-          set -euo pipefail
-          if [ "$DRY_RUN" = "true" ]; then RESULT=$(docker exec "$CONTAINER_NAME" node scripts/cleanup-expired-registrations.mjs --dry-run); else RESULT=$(docker exec "$CONTAINER_NAME" node scripts/cleanup-expired-registrations.mjs); fi
-          echo "Registration cleanup result: $RESULT" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$EVENT" = "schedule" ]; then
+            # Scheduled retention policy: explicit fixed write verb.
+            sudo -n /usr/local/sbin/em-prodctl cleanup-expired-uploads
+          else
+            # Manual dispatch: dry-run only.
+            sudo -n /usr/local/sbin/em-prodctl cleanup-expired-uploads-dry-run
+          fi
